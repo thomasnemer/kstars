@@ -61,6 +61,7 @@
 #include "mcp/tools/focustools.h"
 #include "mcp/tools/aligntools.h"
 #include "mcp/tools/schedulertools.h"
+#include "mcp/tools/inditools.h"
 
 #include <basedevice.h>
 
@@ -219,6 +220,7 @@ Manager::Manager(QWidget * parent) : QDialog(parent), m_networkManager(this)
         MCP::Tools::initFocusTools(m_MCPServer->registry(), this);
         MCP::Tools::initAlignTools(m_MCPServer->registry(), this);
         MCP::Tools::initSchedulerTools(m_MCPServer->registry(), this);
+        MCP::Tools::initIndiTools(m_MCPServer->registry(), this);
         m_MCPServer->start(Options::mCPPort());
         qCInfo(KSTARS_EKOS) << "MCP server started on port" << Options::mCPPort();
     }
