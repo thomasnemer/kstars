@@ -66,6 +66,19 @@ void Transport::setToken(const QString &token)
     m_token = token;
 }
 
+void Transport::setReadOnlyToken(const QString &token)
+{
+    m_readOnlyToken = token;
+}
+
+bool Transport::isReadOnlySession(QTcpSocket *socket) const
+{
+    auto it = m_connections.constFind(socket);
+    if (it == m_connections.constEnd())
+        return false;
+    return it->readOnlySession;
+}
+
 void Transport::onNewConnection()
 {
     while (m_server->hasPendingConnections())
@@ -168,11 +181,23 @@ void Transport::processHeaders(QTcpSocket *socket, ConnectionState &state)
             authHeader = QString::fromUtf8(value);
     }
 
-    // Auth check
+    // Auth check — primary token grants full access; read-only token grants observe-only
     if (!m_token.isEmpty())
     {
-        const QString expected = QStringLiteral("Bearer ") + m_token;
-        if (authHeader != expected)
+        const QString bearerFull = QStringLiteral("Bearer ") + m_token;
+        const QString bearerRO   = !m_readOnlyToken.isEmpty()
+                                   ? QStringLiteral("Bearer ") + m_readOnlyToken
+                                   : QString();
+
+        if (authHeader == bearerFull)
+        {
+            state.readOnlySession = false;
+        }
+        else if (!bearerRO.isEmpty() && authHeader == bearerRO)
+        {
+            state.readOnlySession = true;
+        }
+        else
         {
             QByteArray body = R"({"error":"Invalid or missing token"})";
             QByteArray response;

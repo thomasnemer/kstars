@@ -199,6 +199,13 @@ void initSchedulerTools(ToolRegistry *registry, Ekos::Manager *manager)
             return QJsonObject{};
         }
     });
+
+    registry->classify(QStringLiteral("scheduler_status"),      /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("scheduler_jobs"),        /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("scheduler_current_job"), /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("scheduler_start"),       /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("scheduler_stop"),        /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("scheduler_load"),        /*ro*/false, /*destr*/true,  /*idemp*/false);
 }
 
 } // namespace Tools

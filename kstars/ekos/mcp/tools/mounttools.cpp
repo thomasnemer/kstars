@@ -271,6 +271,15 @@ void initMountTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
             return QJsonObject { { QStringLiteral("success"), true } };
         }
     });
+
+    registry->classify(QStringLiteral("mount_coords"),            /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("mount_goto"),              /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("mount_goto_target"),       /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("mount_sync"),              /*ro*/false, /*destr*/true,  /*idemp*/false);
+    registry->classify(QStringLiteral("mount_park"),              /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("mount_unpark"),            /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("mount_abort"),             /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("mount_set_meridian_flip"), /*ro*/false, /*destr*/false, /*idemp*/true);
 }
 
 } // namespace MCP::Tools

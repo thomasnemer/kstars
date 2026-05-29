@@ -88,8 +88,9 @@ OpsEkos::OpsEkos() : QTabWidget(KStars::Instance())
         });
     }
 
-    // Populate token field
+    // Populate token fields
     mcpTokenEdit->setText(Options::mCPToken());
+    mcpROTokenEdit->setText(Options::mCPReadOnlyToken());
 
     // Copy token to clipboard
     connect(mcpCopyTokenButton, &QPushButton::clicked, this, [this]()
@@ -104,6 +105,21 @@ OpsEkos::OpsEkos() : QTabWidget(KStars::Instance())
         if (mgr && mgr->mcpServer())
             mgr->mcpServer()->regenerateToken();
         mcpTokenEdit->setText(Options::mCPToken());
+    });
+
+    // Copy read-only token to clipboard
+    connect(mcpCopyROTokenButton, &QPushButton::clicked, this, [this]()
+    {
+        QApplication::clipboard()->setText(mcpROTokenEdit->text());
+    });
+
+    // Regenerate read-only token (lazy: generate on first click)
+    connect(mcpRegenROTokenButton, &QPushButton::clicked, this, [this]()
+    {
+        auto *mgr = Ekos::Manager::Instance();
+        if (mgr && mgr->mcpServer())
+            mgr->mcpServer()->regenerateReadOnlyToken();
+        mcpROTokenEdit->setText(Options::mCPReadOnlyToken());
     });
 }
 

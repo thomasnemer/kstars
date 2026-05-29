@@ -3951,5 +3951,13 @@
          <label>MCP authentication token</label>
          <default></default>
       </entry>
+      <entry name="MCPReadOnlyMode" type="Bool">
+         <label>Allow only read-only MCP tools</label>
+         <default>false</default>
+      </entry>
+      <entry name="MCPReadOnlyToken" type="String">
+         <label>Optional bearer token granting read-only access</label>
+         <default></default>
+      </entry>
    </group>
 </kcfg>

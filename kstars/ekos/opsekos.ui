@@ -358,6 +358,48 @@
             </item>
            </layout>
           </item>
+          <item>
+           <widget class="QCheckBox" name="kcfg_MCPReadOnlyMode">
+            <property name="text">
+             <string>Read-only mode (refuse rig control tools)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_mcp_ro_token">
+            <item>
+             <widget class="QLabel" name="mcpROTokenLabel">
+              <property name="text">
+               <string>Read-only token:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="mcpROTokenEdit">
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="mcpCopyROTokenButton">
+              <property name="text">
+               <string>Copy</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="mcpRegenROTokenButton">
+              <property name="text">
+               <string>Regenerate</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
          </layout>
         </widget>
        </item>

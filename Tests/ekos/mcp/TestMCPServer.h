@@ -22,4 +22,7 @@ private Q_SLOTS:
     void testInvalidJsonRpcVersion();
     void testTokenRegeneration();
     void testCaptureGuideToolsRegistered();
+    void testAnnotationsEmitted();
+    void testReadOnlyModeBlocks();
+    void testReadOnlyTokenGates();
 };

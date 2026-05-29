@@ -222,6 +222,125 @@ void TestMCPServer::testTokenRegeneration()
     QVERIFY(s.readAll().startsWith("HTTP/1.1 401"));
 }
 
+void TestMCPServer::testAnnotationsEmitted()
+{
+    MCP::Server server;
+    server.registry()->registerTool({
+        "annotated_tool", "A test tool", {}, [](const QJsonObject &, QString &) -> QJsonValue {
+            return QJsonObject{};
+        }
+    });
+    server.registry()->classify("annotated_tool", /*ro*/true, /*destr*/false, /*idemp*/true);
+
+    MCPTestClient client(startServer(server));
+    QJsonObject req{ {"jsonrpc", "2.0"}, {"id", 1}, {"method", "tools/list"} };
+    QJsonObject resp = client.post(req);
+    QVERIFY(resp.contains("result"));
+    QJsonArray tools = resp["result"].toObject()["tools"].toArray();
+    QVERIFY(!tools.isEmpty());
+
+    // Find our tool and verify its annotations
+    QJsonObject found;
+    for (const auto &t : tools)
+    {
+        if (t.toObject()["name"].toString() == "annotated_tool")
+        {
+            found = t.toObject();
+            break;
+        }
+    }
+    QVERIFY2(!found.isEmpty(), "annotated_tool not found in tools/list");
+    QVERIFY(found.contains("annotations"));
+    QJsonObject ann = found["annotations"].toObject();
+    QCOMPARE(ann["readOnlyHint"].toBool(),    true);
+    QCOMPARE(ann["destructiveHint"].toBool(), false);
+    QCOMPARE(ann["idempotentHint"].toBool(),  true);
+    QCOMPARE(ann["openWorldHint"].toBool(),   false);
+}
+
+void TestMCPServer::testReadOnlyModeBlocks()
+{
+    MCP::Server server;
+
+    // Register a read-only tool and a mutating tool
+    server.registry()->registerTool({
+        "ro_tool", "Read-only tool", {}, [](const QJsonObject &, QString &) -> QJsonValue {
+            return QJsonObject{{"ok", true}};
+        }
+    });
+    server.registry()->classify("ro_tool", /*ro*/true);
+
+    server.registry()->registerTool({
+        "mut_tool", "Mutating tool", {}, [](const QJsonObject &, QString &) -> QJsonValue {
+            return QJsonObject{{"ok", true}};
+        }
+    });
+    server.registry()->classify("mut_tool", /*ro*/false);
+
+    Options::setMCPReadOnlyMode(true);
+    MCPTestClient client(startServer(server));
+
+    auto callTool = [&](const QString &name) -> QJsonObject {
+        QJsonObject params;
+        params["name"]      = name;
+        params["arguments"] = QJsonObject{};
+        QJsonObject req{ {"jsonrpc", "2.0"}, {"id", 1}, {"method", "tools/call"}, {"params", params} };
+        return client.post(req);
+    };
+
+    // Read-only tool must succeed
+    QJsonObject roResp = callTool("ro_tool");
+    QVERIFY2(roResp.contains("result"), "read-only tool should succeed in read-only mode");
+
+    // Mutating tool must be blocked
+    QJsonObject mutResp = callTool("mut_tool");
+    QVERIFY2(mutResp.contains("error"), "mutating tool should be blocked in read-only mode");
+    QCOMPARE(mutResp["error"].toObject()["code"].toInt(), -32601);
+
+    Options::setMCPReadOnlyMode(false);
+}
+
+void TestMCPServer::testReadOnlyTokenGates()
+{
+    MCP::Server server;
+
+    server.registry()->registerTool({
+        "ro_tool2", "Read-only tool", {}, [](const QJsonObject &, QString &) -> QJsonValue {
+            return QJsonObject{{"ok", true}};
+        }
+    });
+    server.registry()->classify("ro_tool2", /*ro*/true);
+
+    server.registry()->registerTool({
+        "mut_tool2", "Mutating tool", {}, [](const QJsonObject &, QString &) -> QJsonValue {
+            return QJsonObject{{"ok", true}};
+        }
+    });
+    server.registry()->classify("mut_tool2", /*ro*/false);
+
+    // Configure tokens
+    Options::setMCPToken("full-token");
+    Options::setMCPReadOnlyToken("ro-token");
+    const quint16 port = startServer(server);
+
+    auto callWithToken = [&](const QString &token, const QString &toolName) -> QJsonObject {
+        QJsonObject params;
+        params["name"]      = toolName;
+        params["arguments"] = QJsonObject{};
+        QJsonObject req{ {"jsonrpc", "2.0"}, {"id", 1}, {"method", "tools/call"}, {"params", params} };
+        MCPTestClient c(port, token);
+        return c.post(req);
+    };
+
+    // Read-only token: can call ro_tool2, blocked from mut_tool2
+    QVERIFY(callWithToken("ro-token",   "ro_tool2").contains("result"));
+    QVERIFY(callWithToken("ro-token",   "mut_tool2").contains("error"));
+
+    // Full token: can call both
+    QVERIFY(callWithToken("full-token", "ro_tool2").contains("result"));
+    QVERIFY(callWithToken("full-token", "mut_tool2").contains("result"));
+}
+
 void TestMCPServer::testCaptureGuideToolsRegistered()
 {
     MCP::Server server;

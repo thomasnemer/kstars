@@ -145,6 +145,12 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
             return QJsonObject { { QStringLiteral("success"), true } };
         }
     });
+
+    registry->classify(QStringLiteral("align_status"),        /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("align_solve"),         /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("align_result"),        /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("align_load_and_slew"), /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("align_abort"),         /*ro*/false, /*destr*/false, /*idemp*/true);
 }
 
 } // namespace Tools

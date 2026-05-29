@@ -39,6 +39,9 @@ bool Server::start(quint16 port)
         Options::setMCPToken(token);
     }
     m_transport->setToken(token);
+    const QString roToken = Options::mCPReadOnlyToken();
+    if (!roToken.isEmpty())
+        m_transport->setReadOnlyToken(roToken);
     return m_transport->start(port);
 }
 
@@ -53,6 +56,13 @@ void Server::regenerateToken()
     const QString token = QUuid::createUuid().toString(QUuid::WithoutBraces);
     Options::setMCPToken(token);
     m_transport->setToken(token);
+}
+
+void Server::regenerateReadOnlyToken()
+{
+    const QString token = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    Options::setMCPReadOnlyToken(token);
+    m_transport->setReadOnlyToken(token);
 }
 
 void Server::stop()
@@ -188,6 +198,28 @@ void Server::handleRequest(QTcpSocket *socket, const QByteArray &body)
         QJsonObject params = req["params"].toObject();
         QString toolName   = params["name"].toString();
         QJsonObject args   = params["arguments"].toObject();
+
+        // Read-only enforcement: block mutating tools for read-only sessions or server-wide RO mode
+        const MCP::ToolDefinition *def = m_registry->find(toolName);
+        if (!def)
+        {
+            m_transport->sendResponse(socket,
+                QJsonDocument(makeError(id, -32603, QString("Tool not found: %1").arg(toolName)))
+                    .toJson(QJsonDocument::Compact));
+            return;
+        }
+
+        const bool readOnlySession =
+            Options::mCPReadOnlyMode() || m_transport->isReadOnlySession(socket);
+
+        if (readOnlySession && !def->readOnly)
+        {
+            m_transport->sendResponse(socket,
+                QJsonDocument(makeError(id, -32601,
+                    QStringLiteral("Tool '%1' is not available in read-only mode").arg(toolName)))
+                    .toJson(QJsonDocument::Compact));
+            return;
+        }
 
         QString error;
         QJsonValue toolResult = m_registry->dispatch(toolName, args, error);

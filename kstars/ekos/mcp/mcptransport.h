@@ -47,6 +47,8 @@ public:
     void broadcastSSEEvent(const QString &eventType, const QJsonObject &payload);
 
     void setToken(const QString &token);
+    void setReadOnlyToken(const QString &token);
+    bool isReadOnlySession(QTcpSocket *socket) const;
 
 signals:
     void requestReceived(QTcpSocket *socket, const QByteArray &body);
@@ -61,10 +63,11 @@ private:
     struct ConnectionState
     {
         QByteArray buffer;
-        bool headersComplete { false };
-        int contentLength { -1 };
-        bool isSSE { false };
-        bool authenticated { false };
+        bool headersComplete  { false };
+        int contentLength     { -1 };
+        bool isSSE            { false };
+        bool authenticated    { false };
+        bool readOnlySession  { false };
     };
 
     QTcpServer *m_server { nullptr };
@@ -72,6 +75,7 @@ private:
     QSet<QTcpSocket *> m_sseClients;
 
     QString m_token;
+    QString m_readOnlyToken;
     int m_requestCount { 0 };
     QTimer *m_rateLimitTimer { nullptr };
 

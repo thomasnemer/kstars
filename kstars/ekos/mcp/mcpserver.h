@@ -53,6 +53,7 @@ public:
     void setScheduler(Ekos::Scheduler *scheduler);
 
     void regenerateToken();
+    void regenerateReadOnlyToken();
 
 private slots:
     void handleRequest(QTcpSocket *socket, const QByteArray &body);

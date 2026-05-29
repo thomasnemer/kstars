@@ -392,6 +392,13 @@ void initIndiTools(MCP::ToolRegistry *registry, Ekos::Manager * /*manager*/)
             return QJsonObject{{ "success", true }};
         }
     });
+
+    registry->classify(QStringLiteral("indi_get_devices"),    /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("indi_get_properties"), /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("indi_get_property"),   /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("indi_set_switch"),     /*ro*/false, /*destr*/true,  /*idemp*/false);
+    registry->classify(QStringLiteral("indi_set_number"),     /*ro*/false, /*destr*/true,  /*idemp*/false);
+    registry->classify(QStringLiteral("indi_set_text"),       /*ro*/false, /*destr*/true,  /*idemp*/false);
 }
 
 } // namespace MCP::Tools

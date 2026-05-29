@@ -197,29 +197,51 @@ void initEkosTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
         {},
         [](const QJsonObject &, QString &) -> QJsonValue
         {
-            const QString url   = QStringLiteral("http://localhost:%1/mcp").arg(Options::mCPPort());
-            const QString token = Options::mCPToken();
+            const QString url     = QStringLiteral("http://localhost:%1/mcp").arg(Options::mCPPort());
+            const QString token   = Options::mCPToken();
+            const QString roToken = Options::mCPReadOnlyToken();
 
-            QJsonObject headers;
-            headers[QStringLiteral("Authorization")] = QStringLiteral("Bearer ") + token;
-
-            QJsonObject kstarsServer;
-            kstarsServer[QStringLiteral("url")]     = url;
-            kstarsServer[QStringLiteral("headers")] = headers;
-
-            QJsonObject mcpServers;
-            mcpServers[QStringLiteral("kstars")] = kstarsServer;
-
-            QJsonObject claudeConfig;
-            claudeConfig[QStringLiteral("mcpServers")] = mcpServers;
-
-            return QJsonObject {
-                { QStringLiteral("url"),                url         },
-                { QStringLiteral("token"),              token       },
-                { QStringLiteral("claudeDesktopConfig"), claudeConfig }
+            auto buildConfig = [&](const QString &t) -> QJsonObject {
+                QJsonObject headers;
+                headers[QStringLiteral("Authorization")] = QStringLiteral("Bearer ") + t;
+                QJsonObject srv;
+                srv[QStringLiteral("url")]     = url;
+                srv[QStringLiteral("headers")] = headers;
+                QJsonObject servers;
+                servers[QStringLiteral("kstars")] = srv;
+                QJsonObject cfg;
+                cfg[QStringLiteral("mcpServers")] = servers;
+                return cfg;
             };
+
+            QJsonObject fullAccess;
+            fullAccess[QStringLiteral("token")]               = token;
+            fullAccess[QStringLiteral("claudeDesktopConfig")] = buildConfig(token);
+
+            QJsonObject result;
+            result[QStringLiteral("url")]        = url;
+            result[QStringLiteral("fullAccess")] = fullAccess;
+
+            if (!roToken.isEmpty())
+            {
+                QJsonObject roAccess;
+                roAccess[QStringLiteral("token")]               = roToken;
+                roAccess[QStringLiteral("claudeDesktopConfig")] = buildConfig(roToken);
+                roAccess[QStringLiteral("description")] =
+                    QStringLiteral("Read-only access — observation tools only, no rig control");
+                result[QStringLiteral("readOnly")] = roAccess;
+            }
+
+            return result;
         }
     });
+
+    // Apply read-only classification to all Ekos info tools
+    registry->classify(QStringLiteral("ekos_status"),         /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("ekos_get_logs"),       /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("ekos_list_profiles"),  /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("log_stream_info"),     /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("ekos_get_mcp_config"), /*ro*/true,  /*destr*/false, /*idemp*/true);
 }
 
 } // namespace MCP::Tools

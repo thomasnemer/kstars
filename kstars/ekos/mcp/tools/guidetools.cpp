@@ -203,6 +203,16 @@ void initGuideTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
             return QJsonObject { { "success", true } };
         }
     });
+
+    registry->classify(QStringLiteral("guide_status"),            /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("guide_calibrate"),         /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("guide_start"),             /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("guide_stop"),              /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("guide_suspend"),           /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("guide_resume"),            /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("guide_dither"),            /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("guide_clear_calibration"), /*ro*/false, /*destr*/true,  /*idemp*/true);
+    registry->classify(QStringLiteral("guide_set_exposure"),      /*ro*/false, /*destr*/false, /*idemp*/true);
 }
 
 } // namespace MCP::Tools

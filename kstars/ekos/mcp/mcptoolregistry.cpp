@@ -18,6 +18,22 @@ void ToolRegistry::registerTool(const ToolDefinition &tool)
     m_tools.append(tool);
 }
 
+void ToolRegistry::classify(const QString &name, bool readOnly,
+                             bool destructive, bool idempotent, bool openWorld)
+{
+    for (auto &tool : m_tools)
+    {
+        if (tool.name == name)
+        {
+            tool.readOnly    = readOnly;
+            tool.destructive = destructive;
+            tool.idempotent  = idempotent;
+            tool.openWorld   = openWorld;
+            return;
+        }
+    }
+}
+
 QJsonArray ToolRegistry::toolsList() const
 {
     QJsonArray result;
@@ -43,10 +59,19 @@ QJsonArray ToolRegistry::toolsList() const
         if (!required.isEmpty())
             schema["required"] = required;
 
+        QJsonObject annotations;
+        if (!tool.title.isEmpty())
+            annotations["title"]         = tool.title;
+        annotations["readOnlyHint"]    = tool.readOnly;
+        annotations["destructiveHint"] = tool.destructive;
+        annotations["idempotentHint"]  = tool.idempotent;
+        annotations["openWorldHint"]   = tool.openWorld;
+
         QJsonObject toolObj;
         toolObj["name"]        = tool.name;
         toolObj["description"] = tool.description;
         toolObj["inputSchema"] = schema;
+        toolObj["annotations"] = annotations;
 
         result.append(toolObj);
     }
@@ -62,6 +87,16 @@ QJsonValue ToolRegistry::dispatch(const QString &name, const QJsonObject &args, 
     }
     error = QString("Tool not found: %1").arg(name);
     return QJsonValue();
+}
+
+const ToolDefinition *ToolRegistry::find(const QString &name) const
+{
+    for (const auto &tool : m_tools)
+    {
+        if (tool.name == name)
+            return &tool;
+    }
+    return nullptr;
 }
 
 } // namespace MCP

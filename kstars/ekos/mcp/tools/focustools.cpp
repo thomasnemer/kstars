@@ -189,6 +189,13 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
             return QJsonObject { { "success", true } };
         }
     });
+
+    registry->classify(QStringLiteral("focus_status"),    /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("focus_auto"),      /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("focus_abort"),     /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("focus_step_in"),   /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("focus_step_out"),  /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("focus_check"),     /*ro*/false, /*destr*/false, /*idemp*/false);
 }
 
 } // namespace Tools

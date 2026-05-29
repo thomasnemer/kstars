@@ -199,6 +199,15 @@ void initCaptureTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
             return QJsonObject { { "success", true } };
         }
     });
+
+    registry->classify(QStringLiteral("capture_status"),        /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("capture_get_jobs"),      /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("capture_start"),         /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("capture_stop"),          /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("capture_abort"),         /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("capture_suspend"),       /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("capture_load_sequence"), /*ro*/false, /*destr*/true,  /*idemp*/false);
+    registry->classify(QStringLiteral("capture_set_target"),    /*ro*/false, /*destr*/false, /*idemp*/true);
 }
 
 } // namespace MCP::Tools
