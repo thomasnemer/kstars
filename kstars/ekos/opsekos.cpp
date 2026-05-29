@@ -45,4 +45,13 @@ OpsEkos::OpsEkos() : QTabWidget(KStars::Instance())
         if (text.size() > 0 && newdir.exists() && newdir.isDir())
             kcfg_AnalyzeAlternativeDirectoryName->setText(text);
     });
+
+    // MCP: keep port spinner enabled only when the server is enabled
+    connect(kcfg_MCPEnabled, &QCheckBox::toggled, kcfg_MCPPort, &QSpinBox::setEnabled);
+    kcfg_MCPPort->setEnabled(kcfg_MCPEnabled->isChecked());
+}
+
+void OpsEkos::updateMCPStatus(const QString &text)
+{
+    mcpStatusLabel->setText(text);
 }

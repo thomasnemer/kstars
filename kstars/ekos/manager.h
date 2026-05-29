@@ -37,6 +37,11 @@ class Message;
 class Media;
 }
 
+namespace MCP
+{
+class Server;
+}
+
 class DriverInfo;
 class ProfileInfo;
 class KPageWidgetItem;
@@ -112,6 +117,7 @@ class Manager : public QDialog, public Ui::Manager
         {
             ekosOptionsWidget = ops;
             opsEkos = opsEkosPtr;
+            updateMCPStatusLabel();
         }
         void addObjectToScheduler(SkyObject *object);
 
@@ -611,6 +617,7 @@ class Manager : public QDialog, public Ui::Manager
         std::unique_ptr<Scheduler> schedulerProcess;
         std::unique_ptr<Observatory> observatoryProcess;
         std::unique_ptr<EkosLive::Client> ekosLiveClient;
+        std::unique_ptr<MCP::Server> m_MCPServer;
 
         bool m_LocalMode { true };
         bool m_isStarted { false };
@@ -663,6 +670,7 @@ class Manager : public QDialog, public Ui::Manager
 
         // Used by the help button.
         bool checkIfPageExists(const QString &urlString);
+        void updateMCPStatusLabel();
         QNetworkAccessManager m_networkManager;
         QSet<QString> m_syncedDevices;
         QSet<QString> m_ProfileManagedDevices;
