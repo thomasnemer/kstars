@@ -10,6 +10,7 @@
 #include "ekos/manager.h"
 #include "ekos/ekos.h"
 #include "indi/indilistener.h"
+#include "Options.h"
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -166,6 +167,57 @@ void initEkosTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
                 profiles.append(p);
 
             return QJsonObject { { QStringLiteral("profiles"), profiles } };
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // log_stream_info
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("log_stream_info"),
+        QStringLiteral("Return the URL and instructions for connecting to the live log SSE stream."),
+        {},
+        [](const QJsonObject &, QString &) -> QJsonValue
+        {
+            return QJsonObject {
+                { QStringLiteral("url"),
+                  QStringLiteral("http://localhost:%1/mcp/stream").arg(Options::mCPPort()) },
+                { QStringLiteral("description"),
+                  QStringLiteral("Connect with Accept: text/event-stream to receive live log lines from all Ekos modules.") }
+            };
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // ekos_get_mcp_config
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("ekos_get_mcp_config"),
+        QStringLiteral("Return the MCP server URL, auth token, and a ready-to-paste Claude Desktop config block."),
+        {},
+        [](const QJsonObject &, QString &) -> QJsonValue
+        {
+            const QString url   = QStringLiteral("http://localhost:%1/mcp").arg(Options::mCPPort());
+            const QString token = Options::mCPToken();
+
+            QJsonObject headers;
+            headers[QStringLiteral("Authorization")] = QStringLiteral("Bearer ") + token;
+
+            QJsonObject kstarsServer;
+            kstarsServer[QStringLiteral("url")]     = url;
+            kstarsServer[QStringLiteral("headers")] = headers;
+
+            QJsonObject mcpServers;
+            mcpServers[QStringLiteral("kstars")] = kstarsServer;
+
+            QJsonObject claudeConfig;
+            claudeConfig[QStringLiteral("mcpServers")] = mcpServers;
+
+            return QJsonObject {
+                { QStringLiteral("url"),                url         },
+                { QStringLiteral("token"),              token       },
+                { QStringLiteral("claudeDesktopConfig"), claudeConfig }
+            };
         }
     });
 }

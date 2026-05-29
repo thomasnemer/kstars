@@ -27,6 +27,7 @@ namespace MCP
 
 class Transport;
 class ToolRegistry;
+class LogBridge;
 
 class Server : public QObject
 {
@@ -50,6 +51,8 @@ public:
     void setAlign(Ekos::Align *align);
     void setScheduler(Ekos::Scheduler *scheduler);
 
+    void regenerateToken();
+
 private slots:
     void handleRequest(QTcpSocket *socket, const QByteArray &body);
 
@@ -59,6 +62,7 @@ private:
 
     Transport        *m_transport { nullptr };
     ToolRegistry     *m_registry  { nullptr };
+    LogBridge        *m_logBridge { nullptr };
 
     Ekos::Mount      *m_mount     { nullptr };
     Ekos::Capture    *m_capture   { nullptr };

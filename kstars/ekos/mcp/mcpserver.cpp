@@ -7,12 +7,15 @@
 #include "mcpserver.h"
 #include "mcptransport.h"
 #include "mcptoolregistry.h"
+#include "mcplogbridge.h"
 #include "ekos_mcp_debug.h"
+#include "Options.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QTcpSocket>
+#include <QUuid>
 
 namespace MCP
 {
@@ -21,12 +24,27 @@ Server::Server(QObject *parent) : QObject(parent)
 {
     m_transport = new Transport(this);
     m_registry  = new ToolRegistry(this);
+    m_logBridge = new LogBridge(m_transport, this);
     connect(m_transport, &Transport::requestReceived, this, &Server::handleRequest);
 }
 
 void Server::start(quint16 port)
 {
+    QString token = Options::mCPToken();
+    if (token.isEmpty())
+    {
+        token = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        Options::setMCPToken(token);
+    }
+    m_transport->setToken(token);
     m_transport->start(port);
+}
+
+void Server::regenerateToken()
+{
+    const QString token = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    Options::setMCPToken(token);
+    m_transport->setToken(token);
 }
 
 void Server::stop()
@@ -49,12 +67,41 @@ quint16 Server::port() const
     return m_transport->serverPort();
 }
 
-void Server::setMount(Ekos::Mount *mount)         { m_mount     = mount; }
-void Server::setCapture(Ekos::Capture *capture)   { m_capture   = capture; }
-void Server::setGuide(Ekos::Guide *guide)         { m_guide     = guide; }
-void Server::setFocus(Ekos::FocusModule *focus)   { m_focus     = focus; }
-void Server::setAlign(Ekos::Align *align)         { m_align     = align; }
-void Server::setScheduler(Ekos::Scheduler *sched) { m_scheduler = sched; }
+void Server::setMount(Ekos::Mount *mount)
+{
+    m_mount = mount;
+    if (mount) m_logBridge->connectModule(QStringLiteral("mount"), mount);
+}
+
+void Server::setCapture(Ekos::Capture *capture)
+{
+    m_capture = capture;
+    if (capture) m_logBridge->connectModule(QStringLiteral("capture"), capture);
+}
+
+void Server::setGuide(Ekos::Guide *guide)
+{
+    m_guide = guide;
+    if (guide) m_logBridge->connectModule(QStringLiteral("guide"), guide);
+}
+
+void Server::setFocus(Ekos::FocusModule *focus)
+{
+    m_focus = focus;
+    if (focus) m_logBridge->connectModule(QStringLiteral("focus"), focus);
+}
+
+void Server::setAlign(Ekos::Align *align)
+{
+    m_align = align;
+    if (align) m_logBridge->connectModule(QStringLiteral("align"), align);
+}
+
+void Server::setScheduler(Ekos::Scheduler *sched)
+{
+    m_scheduler = sched;
+    if (sched) m_logBridge->connectModule(QStringLiteral("scheduler"), sched);
+}
 
 void Server::handleRequest(QTcpSocket *socket, const QByteArray &body)
 {

@@ -3,6 +3,7 @@ target_sources(KStarsLib PRIVATE
     mcptransport.cpp
     mcptoolregistry.cpp
     mcpserver.cpp
+    mcplogbridge.cpp
     tools/ekostools.cpp
     tools/mounttools.cpp
     tools/capturetools.cpp

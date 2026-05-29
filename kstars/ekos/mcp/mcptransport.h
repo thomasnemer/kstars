@@ -6,10 +6,13 @@
 
 #pragma once
 
-#include <QObject>
-#include <QHash>
 #include <QByteArray>
+#include <QHash>
+#include <QJsonObject>
+#include <QObject>
+#include <QSet>
 #include <QString>
+#include <QTimer>
 
 class QTcpServer;
 class QTcpSocket;
@@ -41,8 +44,13 @@ public:
     void sendSSEStart(QTcpSocket *socket);
     void sendSSEEvent(QTcpSocket *socket, const QString &eventType, const QByteArray &json);
 
+    void broadcastSSEEvent(const QString &eventType, const QJsonObject &payload);
+
+    void setToken(const QString &token);
+
 signals:
     void requestReceived(QTcpSocket *socket, const QByteArray &body);
+    void sseClientConnected(QTcpSocket *socket);
 
 private slots:
     void onNewConnection();
@@ -55,10 +63,17 @@ private:
         QByteArray buffer;
         bool headersComplete { false };
         int contentLength { -1 };
+        bool isSSE { false };
+        bool authenticated { false };
     };
 
     QTcpServer *m_server { nullptr };
     QHash<QTcpSocket *, ConnectionState> m_connections;
+    QSet<QTcpSocket *> m_sseClients;
+
+    QString m_token;
+    int m_requestCount { 0 };
+    QTimer *m_rateLimitTimer { nullptr };
 
     void processHeaders(QTcpSocket *socket, ConnectionState &state);
     void sendErrorResponse(QTcpSocket *socket, int code, const QByteArray &message);
