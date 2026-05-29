@@ -130,10 +130,23 @@ void Server::handleRequest(QTcpSocket *socket, const QByteArray &body)
         return;
     }
 
-    QJsonObject req    = doc.object();
-    QString method     = req["method"].toString();
+    QJsonObject req     = doc.object();
     bool isNotification = !req.contains("id");
-    QJsonValue id      = isNotification ? QJsonValue() : req["id"];
+    QJsonValue id       = isNotification ? QJsonValue() : req["id"];
+
+    // JSON-RPC 2.0 envelope validation: must be version "2.0" with a non-empty method
+    const QString version = req["jsonrpc"].toString();
+    const QString method  = req["method"].toString();
+    if (version != QLatin1String("2.0") || !req.contains("method") || method.isEmpty())
+    {
+        if (!isNotification)
+            m_transport->sendResponse(socket,
+                QJsonDocument(makeError(id, -32600, "Invalid Request"))
+                    .toJson(QJsonDocument::Compact));
+        else
+            m_transport->sendNoContent(socket);
+        return;
+    }
 
     if (method == "initialize")
     {

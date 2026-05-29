@@ -20,4 +20,5 @@ private Q_SLOTS:
     void testAuthorized();
     void testSSEConnection();
     void testLargeBody();
+    void testRateLimit();
 };

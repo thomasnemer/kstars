@@ -10,6 +10,7 @@
 #include "ekos/mcp/mcptoolregistry.h"
 #include "ekos/mcp/tools/capturetools.h"
 #include "ekos/mcp/tools/guidetools.h"
+#include "Options.h"
 
 #include <QHostAddress>
 #include <QJsonArray>
@@ -162,13 +163,63 @@ void TestMCPServer::testMissingMethod()
     QJsonObject req;
     req["jsonrpc"] = "2.0";
     req["id"]      = 1;
-    // No "method" field
+    // No "method" field — must be -32600 Invalid Request
 
     QJsonObject resp = client.post(req);
     QVERIFY(!resp.isEmpty());
-    // With an empty/missing method, the server should respond with method not found or
-    // similar error
-    QVERIFY(resp.contains("error") || resp.contains("result"));
+    QVERIFY(resp.contains("error"));
+    QCOMPARE(resp["error"].toObject()["code"].toInt(), -32600);
+}
+
+void TestMCPServer::testInvalidJsonRpcVersion()
+{
+    MCP::Server server;
+    MCPTestClient client(startServer(server));
+
+    QJsonObject req;
+    req["jsonrpc"] = "1.0";
+    req["id"]      = 1;
+    req["method"]  = "tools/list";
+
+    QJsonObject resp = client.post(req);
+    QVERIFY(!resp.isEmpty());
+    QVERIFY(resp.contains("error"));
+    QCOMPARE(resp["error"].toObject()["code"].toInt(), -32600);
+}
+
+void TestMCPServer::testTokenRegeneration()
+{
+    MCP::Server server;
+    QVERIFY(server.start(0));
+
+    const QString original = Options::mCPToken();
+    QVERIFY(!original.isEmpty());
+
+    // A request with the original token must succeed
+    MCPTestClient ok(server.port(), original);
+    QJsonObject listReq{ {"jsonrpc", "2.0"}, {"id", 1}, {"method", "tools/list"} };
+    QJsonObject resp = ok.post(listReq);
+    QVERIFY(!resp.isEmpty());
+    QVERIFY(resp.contains("result"));
+
+    // Rotate the token
+    server.regenerateToken();
+    const QString rotated = Options::mCPToken();
+    QVERIFY(rotated != original);
+
+    // A raw request with the OLD token must now get 401
+    QTcpSocket s;
+    s.connectToHost(QHostAddress::LocalHost, server.port());
+    QVERIFY(s.waitForConnected(3000));
+    QByteArray body = "{}";
+    QByteArray r = "POST /mcp HTTP/1.1\r\nHost: localhost\r\n"
+                   "Authorization: Bearer " + original.toLatin1() + "\r\n"
+                   "Content-Type: application/json\r\n"
+                   "Content-Length: " + QByteArray::number(body.size())
+                   + "\r\n\r\n" + body;
+    s.write(r);
+    QVERIFY(s.waitForReadyRead(3000));
+    QVERIFY(s.readAll().startsWith("HTTP/1.1 401"));
 }
 
 void TestMCPServer::testCaptureGuideToolsRegistered()

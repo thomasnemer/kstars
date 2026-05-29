@@ -154,3 +154,32 @@ void TestMCPTransport::testLargeBody()
     QByteArray body = spy.at(0).at(1).toByteArray();
     QVERIFY(body.size() >= 64 * 1024);
 }
+
+void TestMCPTransport::testRateLimit()
+{
+    MCP::Transport t;
+    QVERIFY(t.start(0));
+
+    int count429 = 0;
+    QByteArray body = "{}";
+    QByteArray reqTemplate = "POST /mcp HTTP/1.1\r\nHost: localhost\r\n"
+                             "Content-Type: application/json\r\n"
+                             "Content-Length: " + QByteArray::number(body.size())
+                             + "\r\n\r\n" + body;
+
+    for (int i = 0; i < 70; ++i)
+    {
+        QTcpSocket s;
+        s.connectToHost(QHostAddress::LocalHost, t.serverPort());
+        QVERIFY(s.waitForConnected(3000));
+        s.write(reqTemplate);
+        s.waitForReadyRead(2000);
+        QByteArray resp = s.readAll();
+        if (resp.startsWith("HTTP/1.1 429"))
+            ++count429;
+        s.close();
+    }
+
+    // 60 requests are allowed per 10-second window; 70 requests must produce at least one 429
+    QVERIFY2(count429 > 0, "Expected at least one 429 Too Many Requests after 70 requests");
+}

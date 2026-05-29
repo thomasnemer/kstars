@@ -19,5 +19,7 @@ private Q_SLOTS:
     void testToolsCallModuleUnavailable();
     void testInvalidJSON();
     void testMissingMethod();
+    void testInvalidJsonRpcVersion();
+    void testTokenRegeneration();
     void testCaptureGuideToolsRegistered();
 };
