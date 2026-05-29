@@ -122,6 +122,8 @@ class Manager : public QDialog, public Ui::Manager
         void addObjectToScheduler(SkyObject *object);
 
         MCP::Server *mcpServer() const;
+        void ensureMCPServer();
+        void updateMCPStatusLabel();
 
         Scheduler *schedulerModule()
         {
@@ -672,7 +674,6 @@ class Manager : public QDialog, public Ui::Manager
 
         // Used by the help button.
         bool checkIfPageExists(const QString &urlString);
-        void updateMCPStatusLabel();
         QNetworkAccessManager m_networkManager;
         QSet<QString> m_syncedDevices;
         QSet<QString> m_ProfileManagedDevices;

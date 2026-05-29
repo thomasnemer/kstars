@@ -13,6 +13,7 @@
 #include "mcp/mcpserver.h"
 
 #include <KConfigDialog>
+#include <KLocalizedString>
 #include <QApplication>
 #include <QClipboard>
 #include <QFileDialog>
@@ -52,6 +53,40 @@ OpsEkos::OpsEkos() : QTabWidget(KStars::Instance())
     // MCP: keep port spinner enabled only when the server is enabled
     connect(kcfg_MCPEnabled, &QCheckBox::toggled, kcfg_MCPPort, &QSpinBox::setEnabled);
     kcfg_MCPPort->setEnabled(kcfg_MCPEnabled->isChecked());
+
+    // Live enable/disable the MCP server when the checkbox is toggled in the dialog
+    connect(kcfg_MCPEnabled, &QCheckBox::toggled, this, [this](bool enabled) {
+        auto *mgr = Ekos::Manager::Instance();
+        if (!mgr)
+            return;
+        if (enabled)
+        {
+            mgr->ensureMCPServer();
+        }
+        else if (mgr->mcpServer())
+        {
+            mgr->mcpServer()->stop();
+            mgr->updateMCPStatusLabel();
+        }
+    });
+
+    // Restart on the new port when the user applies settings changes
+    if (m_ConfigDialog)
+    {
+        connect(m_ConfigDialog, &KConfigDialog::settingsChanged, this, [this]() {
+            auto *mgr = Ekos::Manager::Instance();
+            if (!mgr || !mgr->mcpServer())
+                return;
+            if (Options::mCPEnabled() && mgr->mcpServer()->isListening()
+                    && mgr->mcpServer()->port() != static_cast<quint16>(Options::mCPPort()))
+            {
+                if (!mgr->mcpServer()->restart(Options::mCPPort()))
+                    updateMCPStatus(i18n("Failed: port in use"));
+                else
+                    mgr->updateMCPStatusLabel();
+            }
+        });
+    }
 
     // Populate token field
     mcpTokenEdit->setText(Options::mCPToken());

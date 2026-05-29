@@ -21,7 +21,8 @@ QTEST_MAIN(TestMCPServer)
 
 static quint16 startServer(MCP::Server &server)
 {
-    server.start(0);
+    if (!server.start(0))
+        return 0;
     return server.port();
 }
 

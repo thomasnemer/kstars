@@ -28,7 +28,7 @@ Server::Server(QObject *parent) : QObject(parent)
     connect(m_transport, &Transport::requestReceived, this, &Server::handleRequest);
 }
 
-void Server::start(quint16 port)
+bool Server::start(quint16 port)
 {
     QString token = Options::mCPToken();
     if (token.isEmpty())
@@ -37,7 +37,13 @@ void Server::start(quint16 port)
         Options::setMCPToken(token);
     }
     m_transport->setToken(token);
-    m_transport->start(port);
+    return m_transport->start(port);
+}
+
+bool Server::restart(quint16 port)
+{
+    m_transport->stop();
+    return start(port);
 }
 
 void Server::regenerateToken()

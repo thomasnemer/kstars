@@ -215,19 +215,7 @@ Manager::Manager(QWidget * parent) : QDialog(parent), m_networkManager(this)
 
     // MCP server
     if (Options::mCPEnabled())
-    {
-        m_MCPServer = std::make_unique<MCP::Server>(this);
-        MCP::Tools::initEkosTools(m_MCPServer->registry(), this);
-        MCP::Tools::initMountTools(m_MCPServer->registry(), this);
-        MCP::Tools::initFocusTools(m_MCPServer->registry(), this);
-        MCP::Tools::initAlignTools(m_MCPServer->registry(), this);
-        MCP::Tools::initCaptureTools(m_MCPServer->registry(), this);
-        MCP::Tools::initGuideTools(m_MCPServer->registry(), this);
-        MCP::Tools::initSchedulerTools(m_MCPServer->registry(), this);
-        MCP::Tools::initIndiTools(m_MCPServer->registry(), this);
-        m_MCPServer->start(Options::mCPPort());
-        qCInfo(KSTARS_EKOS) << "MCP server started on port" << Options::mCPPort();
-    }
+        ensureMCPServer();
 
     // Refresh MCP module pointers whenever a module is initialized
     connect(this, &Manager::newModule, this, [this](const QString &)
@@ -668,6 +656,41 @@ void Manager::updateMCPStatusLabel()
 MCP::Server *Manager::mcpServer() const
 {
     return m_MCPServer.get();
+}
+
+void Manager::ensureMCPServer()
+{
+    if (!m_MCPServer)
+    {
+        m_MCPServer = std::make_unique<MCP::Server>(this);
+        MCP::Tools::initEkosTools(m_MCPServer->registry(), this);
+        MCP::Tools::initMountTools(m_MCPServer->registry(), this);
+        MCP::Tools::initCaptureTools(m_MCPServer->registry(), this);
+        MCP::Tools::initGuideTools(m_MCPServer->registry(), this);
+        MCP::Tools::initFocusTools(m_MCPServer->registry(), this);
+        MCP::Tools::initAlignTools(m_MCPServer->registry(), this);
+        MCP::Tools::initSchedulerTools(m_MCPServer->registry(), this);
+        MCP::Tools::initIndiTools(m_MCPServer->registry(), this);
+        m_MCPServer->setMount(mountModule());
+        m_MCPServer->setCapture(captureModule());
+        m_MCPServer->setGuide(guideModule());
+        m_MCPServer->setFocus(focusModule());
+        m_MCPServer->setAlign(alignModule());
+        m_MCPServer->setScheduler(schedulerModule());
+    }
+
+    if (m_MCPServer->isListening())
+        return;
+
+    if (!m_MCPServer->start(Options::mCPPort()))
+    {
+        qCWarning(KSTARS_EKOS) << "MCP server failed to start on port" << Options::mCPPort();
+        if (opsEkos)
+            opsEkos->updateMCPStatus(i18n("Failed: port in use"));
+        return;
+    }
+    qCInfo(KSTARS_EKOS) << "MCP server started on port" << Options::mCPPort();
+    updateMCPStatusLabel();
 }
 
 bool Manager::checkIfPageExists(const QString &urlString)
@@ -1137,9 +1160,6 @@ void Manager::processINDI()
 
 void Manager::stop()
 {
-    if (m_MCPServer)
-        m_MCPServer->stop();
-
     cleanDevices();
     m_PortSelector.reset();
     m_PortSelectorTimer.stop();

@@ -36,7 +36,8 @@ class Server : public QObject
 public:
     explicit Server(QObject *parent = nullptr);
 
-    void start(quint16 port);
+    bool start(quint16 port);
+    bool restart(quint16 port);
     void stop();
     bool isListening() const;
     quint16 port() const;
