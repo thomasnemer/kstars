@@ -22,13 +22,20 @@ class LogBridge : public QObject
 public:
     explicit LogBridge(Transport *transport, QObject *parent = nullptr);
 
-    void connectModule(const QString &moduleName, QObject *module);
+    template <typename T>
+    void connectModule(const QString &name, T *module)
+    {
+        if (!module)
+            return;
+        m_moduleNames[module] = name;
+        connect(module, &T::newLog, this, &LogBridge::onNewLog, Qt::UniqueConnection);
+    }
 
 private Q_SLOTS:
     void onNewLog(const QString &text);
 
 private:
-    Transport              *m_transport { nullptr };
+    Transport                *m_transport { nullptr };
     QHash<QObject *, QString> m_moduleNames;
 };
 

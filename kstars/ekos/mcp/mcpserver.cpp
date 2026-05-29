@@ -10,6 +10,8 @@
 #include "mcplogbridge.h"
 #include "ekos_mcp_debug.h"
 #include "Options.h"
+#include "ekos/scheduler/scheduler.h"
+#include "ekos/scheduler/schedulerprocess.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -106,7 +108,12 @@ void Server::setAlign(Ekos::Align *align)
 void Server::setScheduler(Ekos::Scheduler *sched)
 {
     m_scheduler = sched;
-    if (sched) m_logBridge->connectModule(QStringLiteral("scheduler"), sched);
+    if (sched)
+    {
+        auto process = sched->process();
+        if (process)
+            m_logBridge->connectModule(QStringLiteral("scheduler"), process.data());
+    }
 }
 
 void Server::handleRequest(QTcpSocket *socket, const QByteArray &body)

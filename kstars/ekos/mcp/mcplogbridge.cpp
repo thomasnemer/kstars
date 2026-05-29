@@ -15,15 +15,6 @@ LogBridge::LogBridge(Transport *transport, QObject *parent)
 {
 }
 
-void LogBridge::connectModule(const QString &moduleName, QObject *module)
-{
-    if (!module)
-        return;
-    m_moduleNames[module] = moduleName;
-    connect(module, SIGNAL(newLog(const QString &)), this, SLOT(onNewLog(const QString &)),
-            Qt::UniqueConnection);
-}
-
 void LogBridge::onNewLog(const QString &text)
 {
     QObject *src = sender();
