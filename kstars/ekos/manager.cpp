@@ -56,6 +56,8 @@
 #include "ekoslive/message.h"
 #include "ekoslive/media.h"
 #include "mcp/mcpserver.h"
+#include "mcp/tools/ekostools.h"
+#include "mcp/tools/mounttools.h"
 
 #include <basedevice.h>
 
@@ -209,6 +211,8 @@ Manager::Manager(QWidget * parent) : QDialog(parent), m_networkManager(this)
     if (Options::mCPEnabled())
     {
         m_MCPServer = std::make_unique<MCP::Server>(this);
+        MCP::Tools::initEkosTools(m_MCPServer->registry(), this);
+        MCP::Tools::initMountTools(m_MCPServer->registry(), this);
         m_MCPServer->start(Options::mCPPort());
         qCInfo(KSTARS_EKOS) << "MCP server started on port" << Options::mCPPort();
     }

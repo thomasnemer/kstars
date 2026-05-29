@@ -3,6 +3,8 @@ target_sources(KStarsLib PRIVATE
     mcptransport.cpp
     mcptoolregistry.cpp
     mcpserver.cpp
+    tools/ekostools.cpp
+    tools/mounttools.cpp
 )
 
 target_include_directories(KStarsLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
