@@ -1,0 +1,185 @@
+/*
+    SPDX-FileCopyrightText: 2026 Thomas Nemer <thomas.nemer@fortytwo.fr>
+
+    SPDX-License-Identifier: GPL-2.0-or-later
+*/
+
+#include "focustools.h"
+#include "../mcptoolregistry.h"
+
+#include "ekos/manager.h"
+#include "ekos/focus/focusmodule.h"
+#include "ekos/focus/focus.h"
+#include "ekos/ekos.h"
+
+#include <QJsonObject>
+#include <QJsonValue>
+
+namespace MCP
+{
+namespace Tools
+{
+
+void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
+{
+    // focus_status — returns status, focuser, camera, filter for the main focuser
+    registry->registerTool({
+        "focus_status",
+        "Returns the current focus module status including focuser device, camera device, and active filter.",
+        {},
+        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+            auto *focusModule = manager->focusModule();
+            if (!focusModule)
+            {
+                error = "Focus module not available";
+                return {};
+            }
+            auto focuser = focusModule->mainFocuser();
+            if (!focuser)
+            {
+                error = "No focuser available";
+                return {};
+            }
+            QJsonObject result;
+            result["status"]  = Ekos::getFocusStatusString(focuser->status(), false);
+            result["focuser"] = focuser->focuser();
+            result["camera"]  = focuser->camera();
+            result["filter"]  = focuser->filter();
+            return result;
+        }
+    });
+
+    // focus_auto — starts autofocus on the main focuser
+    registry->registerTool({
+        "focus_auto",
+        "Starts the autofocus procedure on the main focuser.",
+        {},
+        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+            auto *focusModule = manager->focusModule();
+            if (!focusModule)
+            {
+                error = "Focus module not available";
+                return {};
+            }
+            auto focuser = focusModule->mainFocuser();
+            if (!focuser)
+            {
+                error = "No focuser available";
+                return {};
+            }
+            focuser->start();
+            return QJsonObject { { "success", true } };
+        }
+    });
+
+    // focus_abort — aborts autofocus
+    registry->registerTool({
+        "focus_abort",
+        "Aborts the current autofocus procedure.",
+        {},
+        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+            auto *focusModule = manager->focusModule();
+            if (!focusModule)
+            {
+                error = "Focus module not available";
+                return {};
+            }
+            auto focuser = focusModule->mainFocuser();
+            if (!focuser)
+            {
+                error = "No focuser available";
+                return {};
+            }
+            focuser->abort();
+            return QJsonObject { { "success", true } };
+        }
+    });
+
+    // focus_step_in — move focuser inward by the given number of steps/ticks
+    registry->registerTool({
+        "focus_step_in",
+        "Moves the focuser inward by the specified number of steps (ticks for absolute focusers, milliseconds for relative focusers).",
+        {
+            { "steps", "integer", "Number of steps (or milliseconds) to move inward.", true }
+        },
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue {
+            auto *focusModule = manager->focusModule();
+            if (!focusModule)
+            {
+                error = "Focus module not available";
+                return {};
+            }
+            auto focuser = focusModule->mainFocuser();
+            if (!focuser)
+            {
+                error = "No focuser available";
+                return {};
+            }
+            int steps = args["steps"].toInt(0);
+            if (steps <= 0)
+            {
+                error = "steps must be a positive integer";
+                return {};
+            }
+            focuser->focusIn(steps);
+            return QJsonObject { { "success", true } };
+        }
+    });
+
+    // focus_step_out — move focuser outward by the given number of steps/ticks
+    registry->registerTool({
+        "focus_step_out",
+        "Moves the focuser outward by the specified number of steps (ticks for absolute focusers, milliseconds for relative focusers).",
+        {
+            { "steps", "integer", "Number of steps (or milliseconds) to move outward.", true }
+        },
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue {
+            auto *focusModule = manager->focusModule();
+            if (!focusModule)
+            {
+                error = "Focus module not available";
+                return {};
+            }
+            auto focuser = focusModule->mainFocuser();
+            if (!focuser)
+            {
+                error = "No focuser available";
+                return {};
+            }
+            int steps = args["steps"].toInt(0);
+            if (steps <= 0)
+            {
+                error = "steps must be a positive integer";
+                return {};
+            }
+            focuser->focusOut(steps);
+            return QJsonObject { { "success", true } };
+        }
+    });
+
+    // focus_check — triggers a focus check against the specified HFR threshold (0.0 = always refocus)
+    registry->registerTool({
+        "focus_check",
+        "Checks focus quality and triggers autofocus if the current HFR exceeds the required threshold (0.0 always triggers autofocus).",
+        {},
+        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+            auto *focusModule = manager->focusModule();
+            if (!focusModule)
+            {
+                error = "Focus module not available";
+                return {};
+            }
+            auto focuser = focusModule->mainFocuser();
+            if (!focuser)
+            {
+                error = "No focuser available";
+                return {};
+            }
+            focuser->checkFocus(0.0);
+            return QJsonObject { { "success", true } };
+        }
+    });
+}
+
+} // namespace Tools
+} // namespace MCP

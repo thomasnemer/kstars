@@ -7,6 +7,9 @@ target_sources(KStarsLib PRIVATE
     tools/mounttools.cpp
     tools/capturetools.cpp
     tools/guidetools.cpp
+    tools/focustools.cpp
+    tools/aligntools.cpp
+    tools/schedulertools.cpp
 )
 
 target_include_directories(KStarsLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

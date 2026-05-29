@@ -58,6 +58,9 @@
 #include "mcp/mcpserver.h"
 #include "mcp/tools/ekostools.h"
 #include "mcp/tools/mounttools.h"
+#include "mcp/tools/focustools.h"
+#include "mcp/tools/aligntools.h"
+#include "mcp/tools/schedulertools.h"
 
 #include <basedevice.h>
 
@@ -213,6 +216,9 @@ Manager::Manager(QWidget * parent) : QDialog(parent), m_networkManager(this)
         m_MCPServer = std::make_unique<MCP::Server>(this);
         MCP::Tools::initEkosTools(m_MCPServer->registry(), this);
         MCP::Tools::initMountTools(m_MCPServer->registry(), this);
+        MCP::Tools::initFocusTools(m_MCPServer->registry(), this);
+        MCP::Tools::initAlignTools(m_MCPServer->registry(), this);
+        MCP::Tools::initSchedulerTools(m_MCPServer->registry(), this);
         m_MCPServer->start(Options::mCPPort());
         qCInfo(KSTARS_EKOS) << "MCP server started on port" << Options::mCPPort();
     }
