@@ -27,7 +27,8 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
         "align_status",
         "Returns the current alignment module status, active camera, and field of view dimensions.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *align = manager->alignModule();
             if (!align)
             {
@@ -54,7 +55,8 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
         "align_solve",
         "Captures a frame and starts plate-solving asynchronously. Poll align_result for the solution.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *align = manager->alignModule();
             if (!align)
             {
@@ -71,7 +73,8 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
         "align_result",
         "Returns the last plate-solve solution (RA in hours, Dec in degrees, orientation in degrees). Returns {\"available\": false} if no solution is available yet.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *align = manager->alignModule();
             if (!align)
             {
@@ -86,10 +89,14 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
                 result["available"] = false;
                 return result;
             }
+            // fov() returns [width, height, pixelScale]
+            QList<double> fovData = align->fov();
             QJsonObject result;
             result["orientation"] = sol[0];
             result["ra"]          = sol[1];
             result["dec"]         = sol[2];
+            if (fovData.size() >= 3)
+                result["pixscale"] = fovData[2];
             result["available"]   = true;
             return result;
         }
@@ -102,7 +109,8 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
         {
             { "path", "string", "Absolute path to the FITS file to load and solve.", true }
         },
-        [manager](const QJsonObject &args, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
             auto *align = manager->alignModule();
             if (!align)
             {
@@ -125,7 +133,8 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
         "align_abort",
         "Aborts the current alignment or plate-solving operation.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *align = manager->alignModule();
             if (!align)
             {

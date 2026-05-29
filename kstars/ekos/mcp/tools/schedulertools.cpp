@@ -29,7 +29,8 @@ void initSchedulerTools(ToolRegistry *registry, Ekos::Manager *manager)
         "scheduler_status",
         "Returns the current scheduler state, the name of the currently executing job, and the active equipment profile.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *scheduler = manager->schedulerModule();
             if (!scheduler)
             {
@@ -55,7 +56,8 @@ void initSchedulerTools(ToolRegistry *registry, Ekos::Manager *manager)
         "scheduler_jobs",
         "Returns all scheduler jobs as a JSON array.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *scheduler = manager->schedulerModule();
             if (!scheduler)
             {
@@ -90,7 +92,8 @@ void initSchedulerTools(ToolRegistry *registry, Ekos::Manager *manager)
         "scheduler_current_job",
         "Returns the name and full details of the currently executing scheduler job.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *scheduler = manager->schedulerModule();
             if (!scheduler)
             {
@@ -122,7 +125,8 @@ void initSchedulerTools(ToolRegistry *registry, Ekos::Manager *manager)
         "scheduler_start",
         "Starts the scheduler to begin executing queued observation jobs.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *scheduler = manager->schedulerModule();
             if (!scheduler)
             {
@@ -145,7 +149,8 @@ void initSchedulerTools(ToolRegistry *registry, Ekos::Manager *manager)
         "scheduler_stop",
         "Stops the scheduler, halting execution of the current and queued observation jobs.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *scheduler = manager->schedulerModule();
             if (!scheduler)
             {
@@ -170,7 +175,8 @@ void initSchedulerTools(ToolRegistry *registry, Ekos::Manager *manager)
         {
             { "path", "string", "Absolute path to the scheduler list file (.esl) to load.", true }
         },
-        [manager](const QJsonObject &args, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
             auto *scheduler = manager->schedulerModule();
             if (!scheduler)
             {

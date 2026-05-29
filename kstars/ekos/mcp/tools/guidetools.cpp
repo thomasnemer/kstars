@@ -78,12 +78,6 @@ void initGuideTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
                 error = "Guide module not available";
                 return {};
             }
-            const Ekos::GuideState state = guide->status();
-            if (state == Ekos::GUIDE_IDLE || state == Ekos::GUIDE_ABORTED)
-            {
-                error = "Guider is not calibrated. Run guide_calibrate first.";
-                return {};
-            }
             guide->guide();
             return QJsonObject { { "success", true } };
         }

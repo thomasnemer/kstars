@@ -5,7 +5,7 @@
 */
 
 #include "inditools.h"
-#include "mcptoolregistry.h"
+#include "../mcptoolregistry.h"
 
 #include "indi/indilistener.h"
 #include "indi/indistd.h"

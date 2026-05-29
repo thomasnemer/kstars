@@ -27,7 +27,8 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
         "focus_status",
         "Returns the current focus module status including focuser device, camera device, and active filter.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *focusModule = manager->focusModule();
             if (!focusModule)
             {
@@ -54,7 +55,8 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
         "focus_auto",
         "Starts the autofocus procedure on the main focuser.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *focusModule = manager->focusModule();
             if (!focusModule)
             {
@@ -77,7 +79,8 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
         "focus_abort",
         "Aborts the current autofocus procedure.",
         {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
             auto *focusModule = manager->focusModule();
             if (!focusModule)
             {
@@ -102,7 +105,8 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
         {
             { "steps", "integer", "Number of steps (or milliseconds) to move inward.", true }
         },
-        [manager](const QJsonObject &args, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
             auto *focusModule = manager->focusModule();
             if (!focusModule)
             {
@@ -133,7 +137,8 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
         {
             { "steps", "integer", "Number of steps (or milliseconds) to move outward.", true }
         },
-        [manager](const QJsonObject &args, QString &error) -> QJsonValue {
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
             auto *focusModule = manager->focusModule();
             if (!focusModule)
             {
@@ -157,12 +162,16 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
         }
     });
 
-    // focus_check — triggers a focus check against the specified HFR threshold (0.0 = always refocus)
+    // focus_check — triggers a focus check against an optional HFR threshold
     registry->registerTool({
         "focus_check",
-        "Checks focus quality and triggers autofocus if the current HFR exceeds the required threshold (0.0 always triggers autofocus).",
-        {},
-        [manager](const QJsonObject &, QString &error) -> QJsonValue {
+        "Checks focus quality and triggers autofocus if the current HFR exceeds the threshold. "
+        "Omit threshold or pass 0.0 to always trigger autofocus.",
+        {
+            { "threshold", "number", "HFR threshold above which autofocus is triggered. Defaults to 0.0 (always trigger).", false }
+        },
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
             auto *focusModule = manager->focusModule();
             if (!focusModule)
             {
@@ -175,7 +184,8 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
                 error = "No focuser available";
                 return {};
             }
-            focuser->checkFocus(0.0);
+            const double threshold = args.value("threshold").toDouble(0.0);
+            focuser->checkFocus(threshold);
             return QJsonObject { { "success", true } };
         }
     });
