@@ -3947,5 +3947,9 @@
          <label>MCP server port</label>
          <default>8765</default>
       </entry>
+      <entry name="MCPToken" type="String">
+         <label>MCP authentication token</label>
+         <default></default>
+      </entry>
    </group>
 </kcfg>

@@ -10,8 +10,11 @@
 #include "kstars.h"
 #include "kstarsdata.h"
 #include "Options.h"
+#include "mcp/mcpserver.h"
 
 #include <KConfigDialog>
+#include <QApplication>
+#include <QClipboard>
 #include <QFileDialog>
 
 OpsEkos::OpsEkos() : QTabWidget(KStars::Instance())
@@ -49,6 +52,24 @@ OpsEkos::OpsEkos() : QTabWidget(KStars::Instance())
     // MCP: keep port spinner enabled only when the server is enabled
     connect(kcfg_MCPEnabled, &QCheckBox::toggled, kcfg_MCPPort, &QSpinBox::setEnabled);
     kcfg_MCPPort->setEnabled(kcfg_MCPEnabled->isChecked());
+
+    // Populate token field
+    mcpTokenEdit->setText(Options::mCPToken());
+
+    // Copy token to clipboard
+    connect(mcpCopyTokenButton, &QPushButton::clicked, this, [this]()
+    {
+        QApplication::clipboard()->setText(mcpTokenEdit->text());
+    });
+
+    // Regenerate token
+    connect(mcpRegenTokenButton, &QPushButton::clicked, this, [this]()
+    {
+        auto *mgr = Ekos::Manager::Instance();
+        if (mgr && mgr->mcpServer())
+            mgr->mcpServer()->regenerateToken();
+        mcpTokenEdit->setText(Options::mCPToken());
+    });
 }
 
 void OpsEkos::updateMCPStatus(const QString &text)

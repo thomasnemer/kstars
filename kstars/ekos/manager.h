@@ -121,6 +121,8 @@ class Manager : public QDialog, public Ui::Manager
         }
         void addObjectToScheduler(SkyObject *object);
 
+        MCP::Server *mcpServer() const;
+
         Scheduler *schedulerModule()
         {
             return schedulerProcess.get();

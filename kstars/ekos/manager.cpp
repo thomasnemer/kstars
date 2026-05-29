@@ -661,6 +661,11 @@ void Manager::updateMCPStatusLabel()
         opsEkos->updateMCPStatus(i18n("Off"));
 }
 
+MCP::Server *Manager::mcpServer() const
+{
+    return m_MCPServer.get();
+}
+
 bool Manager::checkIfPageExists(const QString &urlString)
 {
     if (urlString.isEmpty())
