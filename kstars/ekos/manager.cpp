@@ -62,6 +62,8 @@
 #include "mcp/tools/aligntools.h"
 #include "mcp/tools/schedulertools.h"
 #include "mcp/tools/inditools.h"
+#include "mcp/tools/capturetools.h"
+#include "mcp/tools/guidetools.h"
 
 #include <basedevice.h>
 
@@ -219,6 +221,8 @@ Manager::Manager(QWidget * parent) : QDialog(parent), m_networkManager(this)
         MCP::Tools::initMountTools(m_MCPServer->registry(), this);
         MCP::Tools::initFocusTools(m_MCPServer->registry(), this);
         MCP::Tools::initAlignTools(m_MCPServer->registry(), this);
+        MCP::Tools::initCaptureTools(m_MCPServer->registry(), this);
+        MCP::Tools::initGuideTools(m_MCPServer->registry(), this);
         MCP::Tools::initSchedulerTools(m_MCPServer->registry(), this);
         MCP::Tools::initIndiTools(m_MCPServer->registry(), this);
         m_MCPServer->start(Options::mCPPort());

@@ -8,6 +8,8 @@
 #include "MCPTestClient.h"
 #include "ekos/mcp/mcpserver.h"
 #include "ekos/mcp/mcptoolregistry.h"
+#include "ekos/mcp/tools/capturetools.h"
+#include "ekos/mcp/tools/guidetools.h"
 
 #include <QHostAddress>
 #include <QJsonArray>
@@ -166,4 +168,27 @@ void TestMCPServer::testMissingMethod()
     // With an empty/missing method, the server should respond with method not found or
     // similar error
     QVERIFY(resp.contains("error") || resp.contains("result"));
+}
+
+void TestMCPServer::testCaptureGuideToolsRegistered()
+{
+    MCP::Server server;
+    // Register with nullptr manager — toolsList() never invokes the lambdas
+    MCP::Tools::initCaptureTools(server.registry(), nullptr);
+    MCP::Tools::initGuideTools(server.registry(), nullptr);
+
+    QJsonArray tools = server.registry()->toolsList();
+
+    auto containsTool = [&tools](const QString &name) {
+        for (const auto &t : tools)
+            if (t.toObject()["name"].toString() == name)
+                return true;
+        return false;
+    };
+
+    QVERIFY2(containsTool("capture_status"), "capture_status not found in tools/list");
+    QVERIFY2(containsTool("capture_start"),  "capture_start not found in tools/list");
+    QVERIFY2(containsTool("guide_status"),   "guide_status not found in tools/list");
+    QVERIFY2(containsTool("guide_start"),    "guide_start not found in tools/list");
+    QCOMPARE(tools.size(), 17);
 }
