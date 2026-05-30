@@ -14,6 +14,7 @@
 #include "ekos/guide/guide.h"
 #include "ekos/focus/focusmodule.h"
 #include "ekos/align/align.h"
+#include "ekos/align/polaralignmentassistant.h"
 #include "ekos/scheduler/schedulerprocess.h"
 #include "indi/indimount.h"
 #include "fitsviewer/fitsdata.h"
@@ -88,6 +89,35 @@ void EventBridge::emitStatusChange(const QString &module, const QString &to)
     p[QStringLiteral("to")]     = to;
     p[QStringLiteral("ts")]     = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
     m_transport->broadcastSSEEvent(QStringLiteral("status_change"), p);
+}
+
+// Mirror of paatools.cpp's pahStageString — duplicated here so the
+// paa_stage_change SSE payload reports the same human-readable stage names
+// that paa_status returns, instead of bare enum integers. Stays in sync via
+// the compiler complaining when the enum changes (both switches cover all
+// cases).
+static QString pahStageString(Ekos::PolarAlignmentAssistant::Stage s)
+{
+    using PAA = Ekos::PolarAlignmentAssistant;
+    switch (s)
+    {
+        case PAA::PAH_IDLE:           return QStringLiteral("idle");
+        case PAA::PAH_FIRST_CAPTURE:  return QStringLiteral("first_capture");
+        case PAA::PAH_FIRST_SOLVE:    return QStringLiteral("first_solve");
+        case PAA::PAH_FIND_CP:        return QStringLiteral("find_celestial_pole");
+        case PAA::PAH_FIRST_ROTATE:   return QStringLiteral("first_rotate");
+        case PAA::PAH_FIRST_SETTLE:   return QStringLiteral("first_settle");
+        case PAA::PAH_SECOND_CAPTURE: return QStringLiteral("second_capture");
+        case PAA::PAH_SECOND_SOLVE:   return QStringLiteral("second_solve");
+        case PAA::PAH_SECOND_ROTATE:  return QStringLiteral("second_rotate");
+        case PAA::PAH_SECOND_SETTLE:  return QStringLiteral("second_settle");
+        case PAA::PAH_THIRD_CAPTURE:  return QStringLiteral("third_capture");
+        case PAA::PAH_THIRD_SOLVE:    return QStringLiteral("third_solve");
+        case PAA::PAH_STAR_SELECT:    return QStringLiteral("star_select");
+        case PAA::PAH_REFRESH:        return QStringLiteral("refresh");
+        case PAA::PAH_POST_REFRESH:   return QStringLiteral("post_refresh");
+    }
+    return QStringLiteral("unknown");
 }
 
 // Free-function mirror of the ISD::Mount::statusString member so we can map an
@@ -230,6 +260,38 @@ void EventBridge::connectAlign(Ekos::Align *a)
             p[it.key()] = QJsonValue::fromVariant(it.value());
         m_transport->broadcastSSEEvent(QStringLiteral("align_solution"), p);
     });
+
+    if (auto *paa = a->polarAlignmentAssistant())
+    {
+        // PAA is owned by Align; disconnect any prior wiring before reconnecting
+        // for the same restacking reason documented in connectMount.
+        disconnect(paa, nullptr, this, nullptr);
+        qCDebug(KSTARS_EKOS_MCP) << "EventBridge: hooking PAA signals on" << static_cast<void*>(paa);
+        connect(paa, &Ekos::PolarAlignmentAssistant::newPAHStage, this,
+                [this](Ekos::PolarAlignmentAssistant::Stage stage)
+        {
+            qCDebug(KSTARS_EKOS_MCP) << "EventBridge: paa_stage_change emit; stage=" << int(stage);
+            QJsonObject p;
+            p[QStringLiteral("module")] = QStringLiteral("align");
+            p[QStringLiteral("stage")]  = pahStageString(stage);
+            m_transport->broadcastSSEEvent(QStringLiteral("paa_stage_change"), p);
+        });
+        connect(paa, &Ekos::PolarAlignmentAssistant::updatedErrorsChanged, this,
+                [this](double total, double az, double alt)
+        {
+            QJsonObject p;
+            p[QStringLiteral("module")]   = QStringLiteral("align");
+            p[QStringLiteral("totalDeg")] = total;
+            p[QStringLiteral("azDeg")]    = az;
+            p[QStringLiteral("altDeg")]   = alt;
+            m_transport->broadcastSSEEvent(QStringLiteral("paa_error_update"), p);
+        });
+    }
+    else
+    {
+        qCWarning(KSTARS_EKOS_MCP) << "EventBridge: connectAlign called but polarAlignmentAssistant() is null —"
+                                   << "paa_stage_change/paa_error_update will not be wired";
+    }
 }
 
 void EventBridge::connectScheduler(Ekos::SchedulerProcess *s)

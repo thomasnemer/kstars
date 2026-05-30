@@ -19,6 +19,7 @@
 #include "ekos/guide/guide.h"
 #include "ekos/focus/focusmodule.h"
 #include "ekos/align/align.h"
+#include "ekos/align/polaralignmentassistant.h"
 #include "fitsviewer/fitsdata.h"
 
 #include <QJsonDocument>
@@ -163,6 +164,18 @@ void Server::setAlign(Ekos::Align *align)
     {
         m_logBridge->connectModule(QStringLiteral("align"), align);
         m_eventBridge->connectAlign(align);
+
+        if (auto *paa = align->polarAlignmentAssistant())
+        {
+            connect(paa, &Ekos::PolarAlignmentAssistant::updatedErrorsChanged, this,
+                    [this](double total, double az, double alt)
+            {
+                m_polarAlignState.hasError = true;
+                m_polarAlignState.totalDeg = total;
+                m_polarAlignState.azDeg    = az;
+                m_polarAlignState.altDeg   = alt;
+            });
+        }
     }
 }
 

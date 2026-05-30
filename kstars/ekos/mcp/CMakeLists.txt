@@ -18,6 +18,7 @@ target_sources(KStarsLib PRIVATE
     tools/focusertools.cpp
     tools/filtertools.cpp
     tools/imagetools.cpp
+    tools/paatools.cpp
 )
 
 target_include_directories(KStarsLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

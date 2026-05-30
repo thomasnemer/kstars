@@ -318,6 +318,12 @@ void initEkosTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
             events.append(e("scheduler_event",
                             "Scheduler job started/ended.",
                             {"module", "event", "jobName", "reason"}));
+            events.append(e("paa_stage_change",
+                            "Polar Alignment Assistant stage transition. Poll paa_status for the new stage.",
+                            {"module", "event"}));
+            events.append(e("paa_error_update",
+                            "PAA refresh-stage alignment error sample, in degrees.",
+                            {"module", "totalDeg", "azDeg", "altDeg"}));
             return QJsonObject { { QStringLiteral("events"), events } };
         }
     });

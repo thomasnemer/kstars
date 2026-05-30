@@ -79,6 +79,17 @@ public:
     };
     const LastImage &lastImage() const { return m_lastImage; }
 
+    // Latest polar-alignment error values, populated by Server's hook on
+    // PolarAlignmentAssistant::updatedErrorsChanged.
+    struct PolarAlignState
+    {
+        bool   hasError = false;
+        double totalDeg = 0.0;
+        double azDeg    = 0.0;
+        double altDeg   = 0.0;
+    };
+    const PolarAlignState &polarAlignState() const { return m_polarAlignState; }
+
 private slots:
     void handleRequest(QTcpSocket *socket, const QByteArray &body);
 
@@ -99,6 +110,7 @@ private:
     Ekos::Scheduler  *m_scheduler { nullptr };
 
     LastImage         m_lastImage;
+    PolarAlignState   m_polarAlignState;
 };
 
 } // namespace MCP
