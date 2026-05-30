@@ -32,6 +32,7 @@ namespace MCP
 class Transport;
 class ToolRegistry;
 class LogBridge;
+class EventBridge;
 
 class Server : public QObject
 {
@@ -85,9 +86,10 @@ private:
     QJsonObject makeResponse(const QJsonValue &id, const QJsonValue &result) const;
     QJsonObject makeError(const QJsonValue &id, int code, const QString &message) const;
 
-    Transport        *m_transport { nullptr };
-    ToolRegistry     *m_registry  { nullptr };
-    LogBridge        *m_logBridge { nullptr };
+    Transport        *m_transport   { nullptr };
+    ToolRegistry     *m_registry    { nullptr };
+    LogBridge        *m_logBridge   { nullptr };
+    EventBridge      *m_eventBridge { nullptr };
 
     Ekos::Mount      *m_mount     { nullptr };
     Ekos::Capture    *m_capture   { nullptr };

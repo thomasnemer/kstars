@@ -8,6 +8,7 @@
 #include "mcptransport.h"
 #include "mcptoolregistry.h"
 #include "mcplogbridge.h"
+#include "mcpeventbridge.h"
 #include "ekos_mcp_debug.h"
 #include "Options.h"
 #include "ekos/scheduler/scheduler.h"
@@ -31,9 +32,10 @@ namespace MCP
 
 Server::Server(QObject *parent) : QObject(parent)
 {
-    m_transport = new Transport(this);
-    m_registry  = new ToolRegistry(this);
-    m_logBridge = new LogBridge(m_transport, this);
+    m_transport   = new Transport(this);
+    m_registry    = new ToolRegistry(this);
+    m_logBridge   = new LogBridge(m_transport, this);
+    m_eventBridge = new EventBridge(m_transport, this);
     connect(m_transport, &Transport::requestReceived, this, &Server::handleRequest);
 }
 
@@ -95,7 +97,11 @@ quint16 Server::port() const
 void Server::setMount(Ekos::Mount *mount)
 {
     m_mount = mount;
-    if (mount) m_logBridge->connectModule(QStringLiteral("mount"), mount);
+    if (mount)
+    {
+        m_logBridge->connectModule(QStringLiteral("mount"), mount);
+        m_eventBridge->connectMount(mount);
+    }
 }
 
 void Server::setCapture(Ekos::Capture *capture)
@@ -104,6 +110,7 @@ void Server::setCapture(Ekos::Capture *capture)
     if (capture)
     {
         m_logBridge->connectModule(QStringLiteral("capture"), capture);
+        m_eventBridge->connectCapture(capture);
         connect(capture, &Ekos::Capture::newImage, this,
                 [this](const QSharedPointer<Ekos::SequenceJob> &job,
                        const QSharedPointer<FITSData> &data,
@@ -132,19 +139,31 @@ void Server::setCapture(Ekos::Capture *capture)
 void Server::setGuide(Ekos::Guide *guide)
 {
     m_guide = guide;
-    if (guide) m_logBridge->connectModule(QStringLiteral("guide"), guide);
+    if (guide)
+    {
+        m_logBridge->connectModule(QStringLiteral("guide"), guide);
+        m_eventBridge->connectGuide(guide);
+    }
 }
 
 void Server::setFocus(Ekos::FocusModule *focus)
 {
     m_focus = focus;
-    if (focus) m_logBridge->connectModule(QStringLiteral("focus"), focus);
+    if (focus)
+    {
+        m_logBridge->connectModule(QStringLiteral("focus"), focus);
+        m_eventBridge->connectFocus(focus);
+    }
 }
 
 void Server::setAlign(Ekos::Align *align)
 {
     m_align = align;
-    if (align) m_logBridge->connectModule(QStringLiteral("align"), align);
+    if (align)
+    {
+        m_logBridge->connectModule(QStringLiteral("align"), align);
+        m_eventBridge->connectAlign(align);
+    }
 }
 
 void Server::setScheduler(Ekos::Scheduler *sched)
@@ -154,7 +173,10 @@ void Server::setScheduler(Ekos::Scheduler *sched)
     {
         auto process = sched->process();
         if (process)
+        {
             m_logBridge->connectModule(QStringLiteral("scheduler"), process.data());
+            m_eventBridge->connectScheduler(process.data());
+        }
     }
 }
 

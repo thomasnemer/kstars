@@ -275,6 +275,54 @@ void initEkosTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
     });
 
     // -----------------------------------------------------------------------
+    // events_list — catalog of typed SSE event names + payload shapes
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("events_list"),
+        QStringLiteral("Returns the catalog of typed SSE event names that /mcp/stream emits and the shape of each "
+                       "payload. Use to discover what to subscribe to without polling the tools."),
+        {},
+        [](const QJsonObject &, QString &) -> QJsonValue
+        {
+            auto e = [](const char *type, const char *desc, const QStringList &fields) {
+                QJsonObject o;
+                o[QStringLiteral("type")]        = QString::fromLatin1(type);
+                o[QStringLiteral("description")] = QString::fromLatin1(desc);
+                QJsonArray fa;
+                for (const auto &f : fields) fa.append(f);
+                o[QStringLiteral("fields")] = fa;
+                return o;
+            };
+            QJsonArray events;
+            events.append(e("log",
+                            "Free-text log line from an Ekos module.",
+                            {"module", "line"}));
+            events.append(e("status_change",
+                            "Module state transition (Idle→Capturing, Slewing→Tracking, etc.).",
+                            {"module", "from", "to", "ts"}));
+            events.append(e("mount_coords_update",
+                            "Throttled (~1 Hz) RA/Dec/Alt/Az.",
+                            {"module", "ra", "dec", "alt", "az"}));
+            events.append(e("guide_deviation",
+                            "Throttled (~2 Hz) per-step RA/DEC delta and rolling sigma (arcsec).",
+                            {"module", "raDelta", "decDelta", "raSigma", "decSigma"}));
+            events.append(e("image_captured",
+                            "A new FITS frame was saved.",
+                            {"module", "path", "hfr", "exposure", "filter"}));
+            events.append(e("capture_progress",
+                            "Per-exposure completion notice with frame metadata.",
+                            {"module", "trainname", "exposure", "path"}));
+            events.append(e("align_solution",
+                            "Plate solve produced a result. Fields mirror Align::newSolution's QVariantMap.",
+                            {"module", "..."}));
+            events.append(e("scheduler_event",
+                            "Scheduler job started/ended.",
+                            {"module", "event", "jobName", "reason"}));
+            return QJsonObject { { QStringLiteral("events"), events } };
+        }
+    });
+
+    // -----------------------------------------------------------------------
     // log_stream_info
     // -----------------------------------------------------------------------
     registry->registerTool({
@@ -350,6 +398,7 @@ void initEkosTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
     registry->classify(QStringLiteral("ekos_start"),          /*ro*/false, /*destr*/false, /*idemp*/true);
     registry->classify(QStringLiteral("ekos_stop"),           /*ro*/false, /*destr*/true,  /*idemp*/true);
     registry->classify(QStringLiteral("ekos_get_profile"),    /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("events_list"),         /*ro*/true,  /*destr*/false, /*idemp*/true);
 }
 
 } // namespace MCP::Tools

@@ -4,6 +4,7 @@ target_sources(KStarsLib PRIVATE
     mcptoolregistry.cpp
     mcpserver.cpp
     mcplogbridge.cpp
+    mcpeventbridge.cpp
     tools/ekostools.cpp
     tools/mounttools.cpp
     tools/capturetools.cpp
