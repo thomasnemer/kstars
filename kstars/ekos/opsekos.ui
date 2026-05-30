@@ -343,6 +343,16 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="mcpShowTokenButton">
+              <property name="text">
+               <string>Show</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="mcpCopyTokenButton">
               <property name="text">
                <string>Copy</string>
@@ -380,6 +390,16 @@
                <enum>QLineEdit::Password</enum>
               </property>
               <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="mcpShowROTokenButton">
+              <property name="text">
+               <string>Show</string>
+              </property>
+              <property name="checkable">
                <bool>true</bool>
               </property>
              </widget>

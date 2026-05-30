@@ -92,6 +92,13 @@ OpsEkos::OpsEkos() : QTabWidget(KStars::Instance())
     mcpTokenEdit->setText(Options::mCPToken());
     mcpROTokenEdit->setText(Options::mCPReadOnlyToken());
 
+    // Toggle token visibility
+    connect(mcpShowTokenButton, &QPushButton::toggled, this, [this](bool shown)
+    {
+        mcpTokenEdit->setEchoMode(shown ? QLineEdit::Normal : QLineEdit::Password);
+        mcpShowTokenButton->setText(shown ? i18n("Hide") : i18n("Show"));
+    });
+
     // Copy token to clipboard
     connect(mcpCopyTokenButton, &QPushButton::clicked, this, [this]()
     {
@@ -105,6 +112,13 @@ OpsEkos::OpsEkos() : QTabWidget(KStars::Instance())
         if (mgr && mgr->mcpServer())
             mgr->mcpServer()->regenerateToken();
         mcpTokenEdit->setText(Options::mCPToken());
+    });
+
+    // Toggle read-only token visibility
+    connect(mcpShowROTokenButton, &QPushButton::toggled, this, [this](bool shown)
+    {
+        mcpROTokenEdit->setEchoMode(shown ? QLineEdit::Normal : QLineEdit::Password);
+        mcpShowROTokenButton->setText(shown ? i18n("Hide") : i18n("Show"));
     });
 
     // Copy read-only token to clipboard
