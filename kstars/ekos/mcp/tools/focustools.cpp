@@ -12,6 +12,7 @@
 #include "ekos/focus/focus.h"
 #include "ekos/ekos.h"
 
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
 
@@ -46,7 +47,45 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
             result["focuser"] = focuser->focuser();
             result["camera"]  = focuser->camera();
             result["filter"]  = focuser->filter();
+            // Current measured HFR (pixels). -1 if no frame has been measured yet.
+            result["hfr"]     = focuser->getHFR();
             return result;
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // focus_hfr_samples — V-curve sample series for the active/last autofocus run
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        "focus_hfr_samples",
+        "Returns the HFR sample series for the active or most-recent autofocus run. Each entry has "
+        "position (focuser steps), hfr (pixels), weight (fit weight, higher = more confident), and "
+        "outlier (true if excluded from the curve fit). Empty array if no autofocus has run yet.",
+        {},
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
+            auto *focusModule = manager->focusModule();
+            if (!focusModule) { error = "Focus module not available"; return {}; }
+            auto focuser = focusModule->mainFocuser();
+            if (!focuser) { error = "No focuser available"; return {}; }
+
+            const auto &positions = focuser->getFocusPositions();
+            const auto &values    = focuser->getFocusHFRValues();
+            const auto &weights   = focuser->getFocusWeights();
+            const auto &outliers  = focuser->getFocusOutliers();
+
+            QJsonArray samples;
+            const int n = positions.size();
+            for (int i = 0; i < n; ++i)
+            {
+                QJsonObject pt;
+                pt["position"] = positions[i];
+                pt["hfr"]      = i < values.size()   ? values[i]    : 0.0;
+                pt["weight"]   = i < weights.size()  ? weights[i]   : 0.0;
+                pt["outlier"]  = i < outliers.size() ? outliers[i]  : false;
+                samples.append(pt);
+            }
+            return QJsonObject { { "samples", samples } };
         }
     });
 
@@ -190,12 +229,13 @@ void initFocusTools(ToolRegistry *registry, Ekos::Manager *manager)
         }
     });
 
-    registry->classify(QStringLiteral("focus_status"),    /*ro*/true,  /*destr*/false, /*idemp*/true);
-    registry->classify(QStringLiteral("focus_auto"),      /*ro*/false, /*destr*/false, /*idemp*/false);
-    registry->classify(QStringLiteral("focus_abort"),     /*ro*/false, /*destr*/false, /*idemp*/true);
-    registry->classify(QStringLiteral("focus_step_in"),   /*ro*/false, /*destr*/false, /*idemp*/false);
-    registry->classify(QStringLiteral("focus_step_out"),  /*ro*/false, /*destr*/false, /*idemp*/false);
-    registry->classify(QStringLiteral("focus_check"),     /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("focus_status"),       /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("focus_auto"),         /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("focus_abort"),        /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("focus_step_in"),      /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("focus_step_out"),     /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("focus_check"),        /*ro*/false, /*destr*/false, /*idemp*/false);
+    registry->classify(QStringLiteral("focus_hfr_samples"),  /*ro*/true,  /*destr*/false, /*idemp*/true);
 }
 
 } // namespace Tools
