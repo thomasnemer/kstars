@@ -9,6 +9,7 @@
 #include "mcptoolregistry.h"
 #include "mcplogbridge.h"
 #include "mcpeventbridge.h"
+#include "mcpguidehistory.h"
 #include "ekos_mcp_debug.h"
 #include "Options.h"
 #include "ekos/scheduler/scheduler.h"
@@ -33,10 +34,11 @@ namespace MCP
 
 Server::Server(QObject *parent) : QObject(parent)
 {
-    m_transport   = new Transport(this);
-    m_registry    = new ToolRegistry(this);
-    m_logBridge   = new LogBridge(m_transport, this);
-    m_eventBridge = new EventBridge(m_transport, this);
+    m_transport    = new Transport(this);
+    m_registry     = new ToolRegistry(this);
+    m_logBridge    = new LogBridge(m_transport, this);
+    m_eventBridge  = new EventBridge(m_transport, this);
+    m_guideHistory = new GuideHistory(this);
     connect(m_transport, &Transport::requestReceived, this, &Server::handleRequest);
 }
 
@@ -144,6 +146,12 @@ void Server::setGuide(Ekos::Guide *guide)
     {
         m_logBridge->connectModule(QStringLiteral("guide"), guide);
         m_eventBridge->connectGuide(guide);
+        m_guideHistory->clear();
+        m_guideHistory->attach(guide);
+    }
+    else
+    {
+        m_guideHistory->clear();
     }
 }
 

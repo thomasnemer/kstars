@@ -681,6 +681,7 @@ void Manager::ensureMCPServer()
         MCP::Tools::initFilterTools(m_MCPServer->registry());
         MCP::Tools::initImageTools(m_MCPServer->registry(), m_MCPServer.get());
         MCP::Tools::initPAATools(m_MCPServer->registry(), this, m_MCPServer.get());
+        MCP::Tools::initGuideHistoryTools(m_MCPServer->registry(), m_MCPServer.get());
         m_MCPServer->setMount(mountModule());
         m_MCPServer->setCapture(captureModule());
         m_MCPServer->setGuide(guideModule());

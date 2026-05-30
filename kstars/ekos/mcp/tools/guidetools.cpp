@@ -6,11 +6,14 @@
 
 #include "guidetools.h"
 
+#include "../mcpserver.h"
+#include "../mcpguidehistory.h"
 #include "../mcptoolregistry.h"
 #include "ekos/manager.h"
 #include "ekos/guide/guide.h"
 #include "ekos/ekos.h"
 
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
 
@@ -213,6 +216,54 @@ void initGuideTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
     registry->classify(QStringLiteral("guide_dither"),            /*ro*/false, /*destr*/false, /*idemp*/false);
     registry->classify(QStringLiteral("guide_clear_calibration"), /*ro*/false, /*destr*/true,  /*idemp*/true);
     registry->classify(QStringLiteral("guide_set_exposure"),      /*ro*/false, /*destr*/false, /*idemp*/true);
+}
+
+void initGuideHistoryTools(MCP::ToolRegistry *registry, MCP::Server *server)
+{
+    registry->registerTool({
+        QStringLiteral("guide_history"),
+        QStringLiteral("Returns recent guide samples as a time series. Useful for detecting oscillation, drift, "
+                       "or settling problems that a single guide_status snapshot can't show. Each sample reports "
+                       "timestampMs (epoch ms), raDelta/decDelta in arcsec, raSigma/decSigma in arcsec RMS, "
+                       "sampled at the guide cadence (typically ~1 Hz). Capacity ~10 minutes; older samples are "
+                       "evicted FIFO. Buffer clears when Ekos guide module disconnects (typically on Ekos stop)."),
+        {
+            { QStringLiteral("sinceMs"),    QStringLiteral("integer"),
+              QStringLiteral("Return only samples newer than this epoch ms. Default 0 = entire buffer."), false },
+            { QStringLiteral("maxSamples"), QStringLiteral("integer"),
+              QStringLiteral("Cap on returned sample count (newest kept). Defaults to buffer capacity."), false }
+        },
+        [server](const QJsonObject &args, QString &error) -> QJsonValue
+        {
+            auto *hist = server->guideHistory();
+            if (!hist) { error = "Guide history not available"; return {}; }
+
+            const qint64 sinceMs = args.value(QStringLiteral("sinceMs")).toVariant().toLongLong();
+            QVector<MCP::GuideSample> samples = sinceMs > 0 ? hist->samplesSince(sinceMs) : hist->samples();
+
+            const int maxN = args.value(QStringLiteral("maxSamples")).toInt(hist->capacity());
+            if (samples.size() > maxN)
+                samples = samples.mid(samples.size() - maxN);
+
+            QJsonArray arr;
+            for (const auto &s : samples)
+            {
+                QJsonObject pt;
+                pt[QStringLiteral("timestampMs")] = s.timestampMs;
+                pt[QStringLiteral("raDelta")]     = s.raDelta;
+                pt[QStringLiteral("decDelta")]    = s.decDelta;
+                pt[QStringLiteral("raSigma")]     = s.raSigma;
+                pt[QStringLiteral("decSigma")]    = s.decSigma;
+                arr.append(pt);
+            }
+            return QJsonObject {
+                { QStringLiteral("samples"),  arr },
+                { QStringLiteral("capacity"), hist->capacity() }
+            };
+        }
+    });
+
+    registry->classify(QStringLiteral("guide_history"), /*ro*/true, /*destr*/false, /*idemp*/true);
 }
 
 } // namespace MCP::Tools

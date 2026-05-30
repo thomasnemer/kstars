@@ -33,6 +33,7 @@ class Transport;
 class ToolRegistry;
 class LogBridge;
 class EventBridge;
+class GuideHistory;
 
 class Server : public QObject
 {
@@ -90,6 +91,8 @@ public:
     };
     const PolarAlignState &polarAlignState() const { return m_polarAlignState; }
 
+    GuideHistory *guideHistory() const { return m_guideHistory; }
+
 private slots:
     void handleRequest(QTcpSocket *socket, const QByteArray &body);
 
@@ -97,10 +100,11 @@ private:
     QJsonObject makeResponse(const QJsonValue &id, const QJsonValue &result) const;
     QJsonObject makeError(const QJsonValue &id, int code, const QString &message) const;
 
-    Transport        *m_transport   { nullptr };
-    ToolRegistry     *m_registry    { nullptr };
-    LogBridge        *m_logBridge   { nullptr };
-    EventBridge      *m_eventBridge { nullptr };
+    Transport        *m_transport    { nullptr };
+    ToolRegistry     *m_registry     { nullptr };
+    LogBridge        *m_logBridge    { nullptr };
+    EventBridge      *m_eventBridge  { nullptr };
+    GuideHistory     *m_guideHistory { nullptr };
 
     Ekos::Mount      *m_mount     { nullptr };
     Ekos::Capture    *m_capture   { nullptr };
