@@ -20,7 +20,9 @@
 #include "Options.h"
 
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
 #include <QJsonValue>
 
 namespace MCP::Tools
@@ -161,6 +163,101 @@ void initEkosTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
     });
 
     // -----------------------------------------------------------------------
+    // ekos_set_profile
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("ekos_set_profile"),
+        QStringLiteral("Select the active Ekos profile by name. Must be called before ekos_start. "
+                       "Fails if Ekos is already running — call ekos_stop first."),
+        {
+            { QStringLiteral("name"), QStringLiteral("string"),
+              QStringLiteral("Profile name as returned by ekos_list_profiles."), true }
+        },
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
+            if (manager->getEkosStartingStatus() != Ekos::Idle)
+            {
+                error = "Ekos is currently running. Call ekos_stop first.";
+                return {};
+            }
+            const QString name = args[QStringLiteral("name")].toString();
+            if (name.isEmpty())
+            {
+                error = "name must not be empty";
+                return {};
+            }
+            const bool ok = manager->setProfile(name);
+            return QJsonObject { { QStringLiteral("success"), ok } };
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // ekos_start
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("ekos_start"),
+        QStringLiteral("Start the active Ekos profile: boots its INDI server and brings Ekos online. "
+                       "Returns immediately; poll ekos_status to observe the transition from Pending to Success."),
+        {},
+        [manager](const QJsonObject &, QString &) -> QJsonValue
+        {
+            manager->start();
+            return QJsonObject { { QStringLiteral("started"), true } };
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // ekos_stop
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("ekos_stop"),
+        QStringLiteral("Stop Ekos and disconnect from the INDI server. "
+                       "Returns immediately; poll ekos_status to observe the transition back to Idle."),
+        {},
+        [manager](const QJsonObject &, QString &) -> QJsonValue
+        {
+            manager->stop();
+            return QJsonObject{};
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // ekos_get_profile
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("ekos_get_profile"),
+        QStringLiteral("Return the full definition of a named Ekos profile (drivers, host, port, etc.) as a "
+                       "structured object. Returns {\"found\": false} if no profile by that name exists."),
+        {
+            { QStringLiteral("name"), QStringLiteral("string"),
+              QStringLiteral("Profile name as returned by ekos_list_profiles."), true }
+        },
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
+            const QString name = args[QStringLiteral("name")].toString();
+            if (name.isEmpty())
+            {
+                error = "name must not be empty";
+                return {};
+            }
+            const QString raw = manager->getProfile(name);
+            if (raw.isEmpty())
+                return QJsonObject { { QStringLiteral("found"), false } };
+
+            QJsonParseError parseError;
+            QJsonDocument doc = QJsonDocument::fromJson(raw.toUtf8(), &parseError);
+            if (parseError.error != QJsonParseError::NoError || !doc.isObject())
+            {
+                error = QStringLiteral("Failed to parse profile JSON: %1").arg(parseError.errorString());
+                return {};
+            }
+            QJsonObject result = doc.object();
+            result[QStringLiteral("found")] = true;
+            return result;
+        }
+    });
+
+    // -----------------------------------------------------------------------
     // ekos_list_profiles
     // -----------------------------------------------------------------------
     registry->registerTool({
@@ -249,6 +346,10 @@ void initEkosTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
     registry->classify(QStringLiteral("ekos_list_profiles"),  /*ro*/true,  /*destr*/false, /*idemp*/true);
     registry->classify(QStringLiteral("log_stream_info"),     /*ro*/true,  /*destr*/false, /*idemp*/true);
     registry->classify(QStringLiteral("ekos_get_mcp_config"), /*ro*/true,  /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("ekos_set_profile"),    /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("ekos_start"),          /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("ekos_stop"),           /*ro*/false, /*destr*/true,  /*idemp*/true);
+    registry->classify(QStringLiteral("ekos_get_profile"),    /*ro*/true,  /*destr*/false, /*idemp*/true);
 }
 
 } // namespace MCP::Tools
