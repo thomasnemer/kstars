@@ -15,6 +15,7 @@
 #include "skycomponents/skymapcomposite.h"
 #include "skyobjects/skyobject.h"
 
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QRegularExpression>
@@ -272,6 +273,95 @@ void initMountTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
         }
     });
 
+    // -----------------------------------------------------------------------
+    // mount_set_tracking
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("mount_set_tracking"),
+        QStringLiteral("Enable or disable mount sidereal tracking."),
+        {
+            { QStringLiteral("enabled"), QStringLiteral("boolean"), QStringLiteral("True to enable tracking, false to disable."), true }
+        },
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
+            auto *mount = manager->mountModule();
+            if (!mount) { error = "Mount module not available"; return {}; }
+            mount->setTrackEnabled(args[QStringLiteral("enabled")].toBool());
+            return QJsonObject { { QStringLiteral("success"), true } };
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // mount_set_track_mode
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("mount_set_track_mode"),
+        QStringLiteral("Set the mount tracking rate. One of 'sidereal', 'lunar', 'solar', or 'custom'."),
+        {
+            { QStringLiteral("mode"), QStringLiteral("string"),
+              QStringLiteral("'sidereal' | 'lunar' | 'solar' | 'custom'"), true }
+        },
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
+            auto *mount = manager->mountModule();
+            if (!mount || !mount->activeMount()) { error = "Mount not available"; return {}; }
+            const QString mode = args[QStringLiteral("mode")].toString();
+            int idx = -1;
+            if      (mode == QLatin1String("sidereal")) idx = ISD::Mount::TRACK_SIDEREAL;
+            else if (mode == QLatin1String("lunar"))    idx = ISD::Mount::TRACK_LUNAR;
+            else if (mode == QLatin1String("solar"))    idx = ISD::Mount::TRACK_SOLAR;
+            else if (mode == QLatin1String("custom"))   idx = ISD::Mount::TRACK_CUSTOM;
+            else { error = "mode must be one of: sidereal, lunar, solar, custom"; return {}; }
+
+            if (!mount->activeMount()->setTrackMode(static_cast<uint8_t>(idx)))
+            { error = "Driver rejected setTrackMode"; return {}; }
+            return QJsonObject { { QStringLiteral("success"), true } };
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // mount_set_slew_rate
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("mount_set_slew_rate"),
+        QStringLiteral("Set the mount slew rate by 0-based index into the driver's supported rates "
+                       "(see mount_get_slew_rates for the list)."),
+        {
+            { QStringLiteral("index"), QStringLiteral("integer"),
+              QStringLiteral("0-based index into the driver's slew-rate list."), true }
+        },
+        [manager](const QJsonObject &args, QString &error) -> QJsonValue
+        {
+            auto *mount = manager->mountModule();
+            if (!mount) { error = "Mount module not available"; return {}; }
+            const int idx = args[QStringLiteral("index")].toInt();
+            if (idx < 0) { error = "index must be >= 0"; return {}; }
+            if (!mount->setSlewRate(idx)) { error = "Driver rejected setSlewRate"; return {}; }
+            return QJsonObject { { QStringLiteral("success"), true } };
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // mount_get_slew_rates
+    // -----------------------------------------------------------------------
+    registry->registerTool({
+        QStringLiteral("mount_get_slew_rates"),
+        QStringLiteral("Return the list of slew rates supported by the driver, and the currently selected index."),
+        {},
+        [manager](const QJsonObject &, QString &error) -> QJsonValue
+        {
+            auto *mount = manager->mountModule();
+            if (!mount || !mount->activeMount()) { error = "Mount not available"; return {}; }
+            QJsonArray names;
+            for (const auto &n : mount->activeMount()->slewRates())
+                names.append(n);
+            return QJsonObject {
+                { QStringLiteral("rates"),   names },
+                { QStringLiteral("current"), mount->slewRate() }
+            };
+        }
+    });
+
     registry->classify(QStringLiteral("mount_coords"),            /*ro*/true,  /*destr*/false, /*idemp*/true);
     registry->classify(QStringLiteral("mount_goto"),              /*ro*/false, /*destr*/false, /*idemp*/false);
     registry->classify(QStringLiteral("mount_goto_target"),       /*ro*/false, /*destr*/false, /*idemp*/false);
@@ -280,6 +370,10 @@ void initMountTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
     registry->classify(QStringLiteral("mount_unpark"),            /*ro*/false, /*destr*/false, /*idemp*/true);
     registry->classify(QStringLiteral("mount_abort"),             /*ro*/false, /*destr*/false, /*idemp*/true);
     registry->classify(QStringLiteral("mount_set_meridian_flip"), /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("mount_set_tracking"),      /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("mount_set_track_mode"),    /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("mount_set_slew_rate"),     /*ro*/false, /*destr*/false, /*idemp*/true);
+    registry->classify(QStringLiteral("mount_get_slew_rates"),    /*ro*/true,  /*destr*/false, /*idemp*/true);
 }
 
 } // namespace MCP::Tools

@@ -64,6 +64,9 @@
 #include "mcp/tools/inditools.h"
 #include "mcp/tools/capturetools.h"
 #include "mcp/tools/guidetools.h"
+#include "mcp/tools/cameratools.h"
+#include "mcp/tools/focusertools.h"
+#include "mcp/tools/filtertools.h"
 
 #include <basedevice.h>
 
@@ -671,6 +674,9 @@ void Manager::ensureMCPServer()
         MCP::Tools::initAlignTools(m_MCPServer->registry(), this);
         MCP::Tools::initSchedulerTools(m_MCPServer->registry(), this);
         MCP::Tools::initIndiTools(m_MCPServer->registry(), this);
+        MCP::Tools::initCameraTools(m_MCPServer->registry());
+        MCP::Tools::initFocuserTools(m_MCPServer->registry());
+        MCP::Tools::initFilterTools(m_MCPServer->registry());
         m_MCPServer->setMount(mountModule());
         m_MCPServer->setCapture(captureModule());
         m_MCPServer->setGuide(guideModule());

@@ -5,6 +5,7 @@
 */
 
 #include "inditools.h"
+#include "devicelookup.h"
 #include "../mcptoolregistry.h"
 
 #include "indi/indilistener.h"
@@ -19,22 +20,10 @@
 namespace MCP::Tools
 {
 
-// ---------------------------------------------------------------------------
-// Helper: find a device by name, return nullptr + set error on failure
-// ---------------------------------------------------------------------------
-static QSharedPointer<ISD::GenericDevice> findDevice(const QString &name, QString &error)
+// Alias so existing call sites can keep using `findDevice(name, error)`.
+static inline QSharedPointer<ISD::GenericDevice> findDevice(const QString &name, QString &error)
 {
-    const auto &devices = INDIListener::Instance()->getDevices();
-    auto it = std::find_if(devices.begin(), devices.end(),
-        [&name](const QSharedPointer<ISD::GenericDevice> &d) {
-            return d->getDeviceName() == name;
-        });
-    if (it == devices.end())
-    {
-        error = QString("Device not found: %1").arg(name);
-        return {};
-    }
-    return *it;
+    return findDeviceByName(name, error);
 }
 
 // ---------------------------------------------------------------------------
