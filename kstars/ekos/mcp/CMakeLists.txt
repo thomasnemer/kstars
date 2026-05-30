@@ -16,6 +16,7 @@ target_sources(KStarsLib PRIVATE
     tools/cameratools.cpp
     tools/focusertools.cpp
     tools/filtertools.cpp
+    tools/imagetools.cpp
 )
 
 target_include_directories(KStarsLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

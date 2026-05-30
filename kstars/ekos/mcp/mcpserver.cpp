@@ -14,9 +14,11 @@
 #include "ekos/scheduler/schedulerprocess.h"
 #include "ekos/mount/mount.h"
 #include "ekos/capture/capture.h"
+#include "ekos/capture/sequencejob.h"
 #include "ekos/guide/guide.h"
 #include "ekos/focus/focusmodule.h"
 #include "ekos/align/align.h"
+#include "fitsviewer/fitsdata.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -99,7 +101,32 @@ void Server::setMount(Ekos::Mount *mount)
 void Server::setCapture(Ekos::Capture *capture)
 {
     m_capture = capture;
-    if (capture) m_logBridge->connectModule(QStringLiteral("capture"), capture);
+    if (capture)
+    {
+        m_logBridge->connectModule(QStringLiteral("capture"), capture);
+        connect(capture, &Ekos::Capture::newImage, this,
+                [this](const QSharedPointer<Ekos::SequenceJob> &job,
+                       const QSharedPointer<FITSData> &data,
+                       const QString &)
+                {
+                    if (!data) return;
+                    m_lastImage.available = true;
+                    m_lastImage.path      = data->filename();
+                    m_lastImage.hfr       = data->getHFR();
+                    m_lastImage.starCount = data->getStarCenters().size();
+                    m_lastImage.width     = data->width();
+                    m_lastImage.height    = data->height();
+                    m_lastImage.data      = data;
+
+                    QVariant v;
+                    if (data->getRecordValue(QStringLiteral("EXPTIME"), v))   m_lastImage.exposure = v.toDouble();
+                    if (data->getRecordValue(QStringLiteral("OBJECT"),  v))   m_lastImage.target   = v.toString();
+                    if (data->getRecordValue(QStringLiteral("DATE-OBS"), v))  m_lastImage.dateObs  = v.toString();
+                    if (data->getRecordValue(QStringLiteral("CCD-TEMP"), v))  m_lastImage.ccdTemp  = v.toDouble();
+                    if (data->getRecordValue(QStringLiteral("FILTER"),  v))   m_lastImage.filter   = v.toString();
+                    Q_UNUSED(job)
+                });
+    }
 }
 
 void Server::setGuide(Ekos::Guide *guide)

@@ -67,6 +67,7 @@
 #include "mcp/tools/cameratools.h"
 #include "mcp/tools/focusertools.h"
 #include "mcp/tools/filtertools.h"
+#include "mcp/tools/imagetools.h"
 
 #include <basedevice.h>
 
@@ -677,6 +678,7 @@ void Manager::ensureMCPServer()
         MCP::Tools::initCameraTools(m_MCPServer->registry());
         MCP::Tools::initFocuserTools(m_MCPServer->registry());
         MCP::Tools::initFilterTools(m_MCPServer->registry());
+        MCP::Tools::initImageTools(m_MCPServer->registry(), m_MCPServer.get());
         m_MCPServer->setMount(mountModule());
         m_MCPServer->setCapture(captureModule());
         m_MCPServer->setGuide(guideModule());

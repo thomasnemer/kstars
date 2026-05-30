@@ -9,8 +9,11 @@
 #include <QObject>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QSharedPointer>
+#include <QString>
 
 class QTcpSocket;
+class FITSData;
 
 namespace Ekos
 {
@@ -20,6 +23,7 @@ class Guide;
 class FocusModule;
 class Align;
 class Scheduler;
+class SequenceJob;
 }
 
 namespace MCP
@@ -55,6 +59,25 @@ public:
     void regenerateToken();
     void regenerateReadOnlyToken();
 
+    // Latest captured image — populated by the Capture::newImage hook installed
+    // in setCapture(). Imagetools reads these for capture_last_image_*.
+    struct LastImage
+    {
+        bool                       available = false;
+        QString                    path;
+        QString                    filter;
+        QString                    target;
+        QString                    dateObs;
+        double                     exposure = 0.0;
+        double                     ccdTemp  = 0.0;
+        double                     hfr      = 0.0;
+        int                        starCount = 0;
+        int                        width    = 0;
+        int                        height   = 0;
+        QSharedPointer<FITSData>   data;
+    };
+    const LastImage &lastImage() const { return m_lastImage; }
+
 private slots:
     void handleRequest(QTcpSocket *socket, const QByteArray &body);
 
@@ -72,6 +95,8 @@ private:
     Ekos::FocusModule *m_focus    { nullptr };
     Ekos::Align      *m_align     { nullptr };
     Ekos::Scheduler  *m_scheduler { nullptr };
+
+    LastImage         m_lastImage;
 };
 
 } // namespace MCP
