@@ -10,6 +10,8 @@
 #include "ekos/manager.h"
 #include "ekos/align/align.h"
 #include "ekos/ekos.h"
+#include "kstarsdata.h"
+#include "skyobjects/skypoint.h"
 
 #include <QJsonObject>
 #include <QJsonValue>
@@ -19,6 +21,39 @@ namespace MCP
 {
 namespace Tools
 {
+
+QJsonObject makeAlignResultPayload(const QList<double> &solution, const QList<double> &fov)
+{
+    if (solution.size() < 3 || solution[1] <= Ekos::INVALID_VALUE)
+    {
+        QJsonObject result;
+        result["available"] = false;
+        return result;
+    }
+
+    // getSolutionResult() returns [orientation_deg, RA_deg_J2000, DEC_deg_J2000].
+    // Convert RA to hours and precess J2000 → JNow so the primary ra/dec match
+    // mount_coords / mount_sync / mount_goto (all JNow). Keep the J2000 values
+    // available separately for callers that need them.
+    const double raJ2000Hours = solution[1] / 15.0;
+    const double decJ2000Deg  = solution[2];
+
+    SkyPoint p;
+    p.setRA0(raJ2000Hours);
+    p.setDec0(decJ2000Deg);
+    p.updateCoordsNow(KStarsData::Instance()->updateNum());
+
+    QJsonObject result;
+    result["orientation"] = solution[0];
+    result["ra"]          = p.ra().Hours();
+    result["dec"]         = p.dec().Degrees();
+    result["ra_j2000"]    = raJ2000Hours;
+    result["dec_j2000"]   = decJ2000Deg;
+    if (fov.size() >= 3)
+        result["pixscale"] = fov[2];
+    result["available"]   = true;
+    return result;
+}
 
 void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
 {
@@ -223,7 +258,11 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
     // align_result — returns the last plate-solve solution
     registry->registerTool({
         "align_result",
-        "Returns the last plate-solve solution (RA in hours, Dec in degrees, orientation in degrees). Returns {\"available\": false} if no solution is available yet.",
+        "Returns the last plate-solve solution. Primary fields (ra, dec) are in JNow and match the mount's "
+        "coordinate system — safe to feed to mount_sync directly. ra in decimal hours (0-24), dec in decimal "
+        "degrees (-90 to +90). ra_j2000 / dec_j2000 are the original solver output (J2000) for callers that "
+        "need them. orientation in degrees (position angle), pixscale in arcsec/pixel. "
+        "Returns {\"available\": false} if no solution is available yet.",
         {},
         [manager](const QJsonObject &, QString &error) -> QJsonValue
         {
@@ -233,24 +272,7 @@ void initAlignTools(ToolRegistry *registry, Ekos::Manager *manager)
                 error = "Align module not available";
                 return {};
             }
-            // getSolutionResult() returns [orientation, RA, DEC]
-            QList<double> sol = align->getSolutionResult();
-            if (sol.size() < 3 || sol[1] <= Ekos::INVALID_VALUE)
-            {
-                QJsonObject result;
-                result["available"] = false;
-                return result;
-            }
-            // fov() returns [width, height, pixelScale]
-            QList<double> fovData = align->fov();
-            QJsonObject result;
-            result["orientation"] = sol[0];
-            result["ra"]          = sol[1];
-            result["dec"]         = sol[2];
-            if (fovData.size() >= 3)
-                result["pixscale"] = fovData[2];
-            result["available"]   = true;
-            return result;
+            return makeAlignResultPayload(align->getSolutionResult(), align->fov());
         }
     });
 

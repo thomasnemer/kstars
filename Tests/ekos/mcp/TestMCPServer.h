@@ -25,4 +25,5 @@ private Q_SLOTS:
     void testAnnotationsEmitted();
     void testReadOnlyModeBlocks();
     void testReadOnlyTokenGates();
+    void testAlignResultConversion();
 };

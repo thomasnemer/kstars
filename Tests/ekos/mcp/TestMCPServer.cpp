@@ -8,8 +8,10 @@
 #include "MCPTestClient.h"
 #include "ekos/mcp/mcpserver.h"
 #include "ekos/mcp/mcptoolregistry.h"
+#include "ekos/mcp/tools/aligntools.h"
 #include "ekos/mcp/tools/capturetools.h"
 #include "ekos/mcp/tools/guidetools.h"
+#include "kstarsdata.h"
 #include "Options.h"
 
 #include <QHostAddress>
@@ -17,6 +19,8 @@
 #include <QJsonObject>
 #include <QTcpSocket>
 #include <QTest>
+
+#include <cmath>
 
 QTEST_MAIN(TestMCPServer)
 
@@ -373,4 +377,46 @@ void TestMCPServer::testCaptureGuideToolsRegistered()
     QVERIFY2(containsTool("guide_status"),   "guide_status not found in tools/list");
     QVERIFY2(containsTool("guide_start"),    "guide_start not found in tools/list");
     QCOMPARE(tools.size(), 17);
+}
+
+void TestMCPServer::testAlignResultConversion()
+{
+    // KStarsData powers the precession path the helper invokes via
+    // SkyPoint::updateCoordsNow. Create it if no prior test already did.
+    if (!KStarsData::Instance())
+        QVERIFY2(KStarsData::Create() != nullptr, "KStarsData::Create() returned null");
+
+    // Solver returns degrees-J2000. Pick values that flag the historical units bug:
+    // RA in degrees (180°) must NOT pass through to ra/ra_j2000 unchanged — it
+    // must be 12.0 hours.
+    QList<double> solution { /*orientation_deg*/ -42.0, /*ra_deg_j2000*/ 180.0, /*dec_deg_j2000*/ 45.0 };
+    QList<double> fov { 1.0, 1.0, /*pixscale_arcsec*/ 1.07 };
+
+    QJsonObject p = MCP::Tools::makeAlignResultPayload(solution, fov);
+
+    QVERIFY(p["available"].toBool());
+
+    // Unit bug regression: RA must be converted from degrees to hours on both
+    // primary (JNow) and J2000 fields. 180° / 15 = 12h.
+    QCOMPARE(p["ra_j2000"].toDouble(),  12.0);
+    QCOMPARE(p["dec_j2000"].toDouble(), 45.0);
+
+    // Epoch bug regression: the JNow fields must come back as finite numbers
+    // within the valid coordinate ranges. We can't assert a precise precession
+    // amount here because the test fixture's KStarsData clock isn't advanced
+    // past J2000 — so ra/dec may equal ra_j2000/dec_j2000 in this environment.
+    // What we CAN assert is that the helper produced both pairs and the math
+    // didn't NaN/overflow.
+    QVERIFY(std::isfinite(p["ra"].toDouble()));
+    QVERIFY(std::isfinite(p["dec"].toDouble()));
+    QVERIFY(p["ra"].toDouble()  >= 0.0  && p["ra"].toDouble()  < 24.0);
+    QVERIFY(p["dec"].toDouble() >= -90.0 && p["dec"].toDouble() <= 90.0);
+
+    // Pass-through fields.
+    QCOMPARE(p["orientation"].toDouble(), -42.0);
+    QCOMPARE(p["pixscale"].toDouble(),    1.07);
+
+    // Invalid solution: too few items must be reported as unavailable, not throw.
+    QJsonObject empty = MCP::Tools::makeAlignResultPayload({}, {});
+    QCOMPARE(empty["available"].toBool(), false);
 }
