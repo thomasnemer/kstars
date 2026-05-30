@@ -6,6 +6,8 @@
 
 #include "MCPTestClient.h"
 
+#include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QHostAddress>
 #include <QJsonDocument>
 #include <QTcpSocket>
@@ -52,6 +54,9 @@ QByteArray MCPTestClient::extractBody(const QByteArray &response) const
     return response.mid(sep + 4);
 }
 
+// Spins the event loop so the same-thread server can accept and respond.
+// A bare waitForReadyRead() on the client socket pumps only that socket's
+// notifier — not the server's QTcpServer or its per-connection sockets.
 QJsonObject MCPTestClient::post(const QJsonObject &request)
 {
     QTcpSocket socket;
@@ -62,29 +67,21 @@ QJsonObject MCPTestClient::post(const QJsonObject &request)
     QByteArray body = QJsonDocument(request).toJson(QJsonDocument::Compact);
     socket.write(buildRequest("POST", "/mcp", body));
 
-    QByteArray response;
-    while (socket.waitForReadyRead(3000))
-    {
+    // Short cap is enough: loopback latency is microseconds, and tests that don't
+    // wire a JSON-RPC handler intentionally produce no response — we don't want
+    // to wait 3s for nothing in those cases.
+    QElapsedTimer timer;
+    timer.start();
+    while (socket.bytesAvailable() == 0 && timer.elapsed() < 500)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+
+    if (socket.bytesAvailable() == 0)
+        return {};
+
+    QByteArray response = socket.readAll();
+    while (socket.waitForReadyRead(200))
         response += socket.readAll();
-        if (response.contains("\r\n\r\n"))
-        {
-            // Check if we have a Content-Length and enough body
-            int sep = response.indexOf("\r\n\r\n");
-            QByteArray headers = response.left(sep);
-            int clPos = headers.toLower().indexOf("content-length:");
-            if (clPos >= 0)
-            {
-                int end = headers.indexOf("\r\n", clPos);
-                int cl  = headers.mid(clPos + 15, end - clPos - 15).trimmed().toInt();
-                if (response.size() >= sep + 4 + cl)
-                    break;
-            }
-            else
-            {
-                break;
-            }
-        }
-    }
+    response += socket.readAll();
     socket.disconnectFromHost();
 
     QJsonParseError err;
@@ -104,8 +101,10 @@ bool MCPTestClient::openSSE()
         m_sseSocket = nullptr;
         return false;
     }
+    // Write the request and return immediately. The caller's QSignalSpy::wait()
+    // runs the event loop so the server processes the request and sends 200 OK.
     m_sseSocket->write(buildRequest("GET", "/mcp/stream"));
-    m_sseSocket->waitForReadyRead(3000);
+    m_sseSocket->flush();
     return true;
 }
 
@@ -118,7 +117,6 @@ QList<QJsonObject> MCPTestClient::readSSEEvents(int waitMs)
     QByteArray data = m_sseSocket->readAll();
 
     QList<QJsonObject> events;
-    // SSE format: lines starting with "data: "
     for (const QByteArray &line : data.split('\n'))
     {
         QByteArray trimmed = line.trimmed();

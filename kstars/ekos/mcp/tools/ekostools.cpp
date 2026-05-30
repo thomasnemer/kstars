@@ -8,6 +8,13 @@
 
 #include "../mcptoolregistry.h"
 #include "ekos/manager.h"
+#include "ekos/mount/mount.h"
+#include "ekos/capture/capture.h"
+#include "ekos/guide/guide.h"
+#include "ekos/focus/focusmodule.h"
+#include "ekos/align/align.h"
+#include "ekos/scheduler/scheduler.h"
+#include "ekos/scheduler/schedulerprocess.h"
 #include "ekos/ekos.h"
 #include "indi/indilistener.h"
 #include "Options.h"
@@ -203,7 +210,7 @@ void initEkosTools(MCP::ToolRegistry *registry, Ekos::Manager *manager)
 
             auto buildConfig = [&](const QString &t) -> QJsonObject {
                 QJsonObject headers;
-                headers[QStringLiteral("Authorization")] = QStringLiteral("Bearer ") + t;
+                headers[QStringLiteral("Authorization")] = QString(QStringLiteral("Bearer ") + t);
                 QJsonObject srv;
                 srv[QStringLiteral("url")]     = url;
                 srv[QStringLiteral("headers")] = headers;

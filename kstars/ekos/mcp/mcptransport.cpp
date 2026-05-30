@@ -38,7 +38,7 @@ bool Transport::start(quint16 port)
         qCWarning(KSTARS_EKOS_MCP) << "Failed to listen on port" << port << ":" << m_server->errorString();
         return false;
     }
-    qCInfo(KSTARS_EKOS_MCP) << "MCP transport listening on 127.0.0.1:" << port;
+    qCInfo(KSTARS_EKOS_MCP) << "MCP transport listening on 127.0.0.1:" << m_server->serverPort();
     return true;
 }
 
@@ -311,6 +311,9 @@ void Transport::sendSSEEvent(QTcpSocket *socket, const QString &eventType, const
     frame += "data: " + json + "\n";
     frame += "\n";
     socket->write(frame);
+    // flush() pushes the frame into the OS send buffer immediately so the client
+    // can receive it without waiting for the Qt event loop's write notifier to fire.
+    socket->flush();
 }
 
 void Transport::sendErrorResponse(QTcpSocket *socket, int code, const QByteArray &message)

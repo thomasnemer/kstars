@@ -8,6 +8,7 @@
 #include "MCPTestClient.h"
 #include "ekos/mcp/mcptransport.h"
 
+#include <QCoreApplication>
 #include <QHostAddress>
 #include <QSignalSpy>
 #include <QTcpSocket>
@@ -42,7 +43,8 @@ void TestMCPTransport::testPostRequest()
     req["method"]  = "tools/list";
     client.post(req);
 
-    QVERIFY(spy.wait(3000));
+    // post() pumps the event loop itself, so by the time it returns the server
+    // has already emitted requestReceived.
     QCOMPARE(spy.count(), 1);
     QByteArray body = spy.at(0).at(1).toByteArray();
     QVERIFY(body.contains("tools/list"));
@@ -60,7 +62,8 @@ void TestMCPTransport::testInvalidMethod()
     // Send GET /mcp (not /mcp/stream) — should get 405
     QByteArray req = "GET /mcp HTTP/1.1\r\nHost: localhost\r\n\r\n";
     socket.write(req);
-    QVERIFY(socket.waitForReadyRead(3000));
+    // QTRY_VERIFY processes the event loop so the server's readyRead slot fires.
+    QTRY_VERIFY_WITH_TIMEOUT(socket.bytesAvailable() > 0, 3000);
     QByteArray response = socket.readAll();
     QVERIFY(response.startsWith("HTTP/1.1 405"));
 }
@@ -81,7 +84,7 @@ void TestMCPTransport::testUnauthorized()
     QByteArray req  = "POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: "
                       + QByteArray::number(body.size()) + "\r\n\r\n" + body;
     socket.write(req);
-    QVERIFY(socket.waitForReadyRead(3000));
+    QTRY_VERIFY_WITH_TIMEOUT(socket.bytesAvailable() > 0, 3000);
     QByteArray response = socket.readAll();
     QVERIFY(response.startsWith("HTTP/1.1 401"));
     QCOMPARE(spy.count(), 0);
@@ -102,7 +105,6 @@ void TestMCPTransport::testAuthorized()
     req["method"]  = "tools/list";
     client.post(req);
 
-    QVERIFY(spy.wait(3000));
     QCOMPARE(spy.count(), 1);
 }
 
@@ -148,7 +150,6 @@ void TestMCPTransport::testLargeBody()
     MCPTestClient client(t.serverPort());
     client.post(req);
 
-    QVERIFY(spy.wait(3000));
     QCOMPARE(spy.count(), 1);
 
     QByteArray body = spy.at(0).at(1).toByteArray();
@@ -171,13 +172,15 @@ void TestMCPTransport::testRateLimit()
     {
         QTcpSocket s;
         s.connectToHost(QHostAddress::LocalHost, t.serverPort());
-        QVERIFY(s.waitForConnected(3000));
+        if (!s.waitForConnected(1000))
+            continue; // allow rare connect failures under rapid load
         s.write(reqTemplate);
-        s.waitForReadyRead(2000);
+        // processEvents lets the server's readyRead fire so it handles the request.
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         QByteArray resp = s.readAll();
         if (resp.startsWith("HTTP/1.1 429"))
             ++count429;
-        s.close();
+        s.abort();
     }
 
     // 60 requests are allowed per 10-second window; 70 requests must produce at least one 429

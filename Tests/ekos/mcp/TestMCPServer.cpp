@@ -30,7 +30,8 @@ static quint16 startServer(MCP::Server &server)
 void TestMCPServer::testInitialize()
 {
     MCP::Server server;
-    MCPTestClient client(startServer(server));
+    const quint16 port = startServer(server);
+    MCPTestClient client(port, Options::mCPToken());
 
     QJsonObject req;
     req["jsonrpc"] = "2.0";
@@ -58,7 +59,8 @@ void TestMCPServer::testToolsList()
         }
     });
 
-    MCPTestClient client(startServer(server));
+    const quint16 port = startServer(server);
+    MCPTestClient client(port, Options::mCPToken());
 
     QJsonObject req;
     req["jsonrpc"] = "2.0";
@@ -78,7 +80,8 @@ void TestMCPServer::testToolsList()
 void TestMCPServer::testToolsCallUnknown()
 {
     MCP::Server server;
-    MCPTestClient client(startServer(server));
+    const quint16 port = startServer(server);
+    MCPTestClient client(port, Options::mCPToken());
 
     QJsonObject params;
     params["name"]      = "nonexistent_tool";
@@ -109,7 +112,8 @@ void TestMCPServer::testToolsCallModuleUnavailable()
         }
     });
 
-    MCPTestClient client(startServer(server));
+    const quint16 port = startServer(server);
+    MCPTestClient client(port, Options::mCPToken());
 
     QJsonObject params;
     params["name"]      = "mount_coords";
@@ -131,7 +135,8 @@ void TestMCPServer::testToolsCallModuleUnavailable()
 void TestMCPServer::testInvalidJSON()
 {
     MCP::Server server;
-    MCPTestClient client(startServer(server));
+    startServer(server);
+    const QString token = Options::mCPToken();
 
     // Send raw invalid JSON via QTcpSocket (MCPTestClient doesn't support this directly)
     QTcpSocket socket;
@@ -139,10 +144,12 @@ void TestMCPServer::testInvalidJSON()
     QVERIFY(socket.waitForConnected(3000));
 
     QByteArray body    = "this is not json {{{";
-    QByteArray request = "POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: "
+    QByteArray request = "POST /mcp HTTP/1.1\r\nHost: localhost\r\n"
+                         "Authorization: Bearer " + token.toLatin1() + "\r\n"
+                         "Content-Type: application/json\r\nContent-Length: "
                          + QByteArray::number(body.size()) + "\r\n\r\n" + body;
     socket.write(request);
-    QVERIFY(socket.waitForReadyRead(3000));
+    QTRY_VERIFY_WITH_TIMEOUT(socket.bytesAvailable() > 0, 3000);
 
     QByteArray response = socket.readAll();
     // Extract JSON body
@@ -158,7 +165,8 @@ void TestMCPServer::testInvalidJSON()
 void TestMCPServer::testMissingMethod()
 {
     MCP::Server server;
-    MCPTestClient client(startServer(server));
+    const quint16 port = startServer(server);
+    MCPTestClient client(port, Options::mCPToken());
 
     QJsonObject req;
     req["jsonrpc"] = "2.0";
@@ -174,7 +182,8 @@ void TestMCPServer::testMissingMethod()
 void TestMCPServer::testInvalidJsonRpcVersion()
 {
     MCP::Server server;
-    MCPTestClient client(startServer(server));
+    const quint16 port = startServer(server);
+    MCPTestClient client(port, Options::mCPToken());
 
     QJsonObject req;
     req["jsonrpc"] = "1.0";
@@ -218,7 +227,7 @@ void TestMCPServer::testTokenRegeneration()
                    "Content-Length: " + QByteArray::number(body.size())
                    + "\r\n\r\n" + body;
     s.write(r);
-    QVERIFY(s.waitForReadyRead(3000));
+    QTRY_VERIFY_WITH_TIMEOUT(s.bytesAvailable() > 0, 3000);
     QVERIFY(s.readAll().startsWith("HTTP/1.1 401"));
 }
 
@@ -232,7 +241,8 @@ void TestMCPServer::testAnnotationsEmitted()
     });
     server.registry()->classify("annotated_tool", /*ro*/true, /*destr*/false, /*idemp*/true);
 
-    MCPTestClient client(startServer(server));
+    const quint16 port = startServer(server);
+    MCPTestClient client(port, Options::mCPToken());
     QJsonObject req{ {"jsonrpc", "2.0"}, {"id", 1}, {"method", "tools/list"} };
     QJsonObject resp = client.post(req);
     QVERIFY(resp.contains("result"));
@@ -278,7 +288,8 @@ void TestMCPServer::testReadOnlyModeBlocks()
     server.registry()->classify("mut_tool", /*ro*/false);
 
     Options::setMCPReadOnlyMode(true);
-    MCPTestClient client(startServer(server));
+    const quint16 port = startServer(server);
+    MCPTestClient client(port, Options::mCPToken());
 
     auto callTool = [&](const QString &name) -> QJsonObject {
         QJsonObject params;

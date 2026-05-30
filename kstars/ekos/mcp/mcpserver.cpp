@@ -12,6 +12,11 @@
 #include "Options.h"
 #include "ekos/scheduler/scheduler.h"
 #include "ekos/scheduler/schedulerprocess.h"
+#include "ekos/mount/mount.h"
+#include "ekos/capture/capture.h"
+#include "ekos/guide/guide.h"
+#include "ekos/focus/focusmodule.h"
+#include "ekos/align/align.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
