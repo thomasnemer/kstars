@@ -179,9 +179,14 @@ void initPAATools(ToolRegistry *registry, Ekos::Manager *manager, Server *server
             auto *paa = align->polarAlignmentAssistant();
             if (!paa) { error = "Polar alignment assistant not available"; return {}; }
 
-            const auto &img = server->lastImage();
+            // PAA captures through its own camera (the one Align is using).
+            // Look up that camera's last frame specifically rather than the
+            // most-recent-across-cameras default, so a stray frame from
+            // another scope on a multi-train rig can't be picked up here.
+            const QString paaCamera = align->camera();
+            const auto &img = server->lastImageFor(paaCamera);
             if (!img.available || img.width == 0 || img.height == 0)
-            { error = "No image available — cannot resolve pixel to percentage"; return {}; }
+            { error = QStringLiteral("No image available for PAA camera '%1' — cannot resolve pixel to percentage").arg(paaCamera); return {}; }
 
             const double x = args[QStringLiteral("x")].toDouble();
             const double y = args[QStringLiteral("y")].toDouble();

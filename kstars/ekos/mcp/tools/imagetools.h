@@ -15,11 +15,13 @@ namespace Tools
 {
 
 // Registers image-access tools:
-//   capture_last_image_info       — metadata + HFR + star count + dimensions
-//   capture_last_image_thumbnail  — base64 JPEG preview (long edge ≤ 1024 px)
+//   image_last_info       — metadata + HFR + star count + dimensions
+//   image_last_thumbnail  — base64 JPEG preview (long edge ≤ 1024 px)
 //
-// Both read from MCP::Server::lastImage(), which is populated by the
-// Capture::newImage hook installed in Server::setCapture().
+// Both read from MCP::Server::lastImage() / lastImageFor(), populated by the
+// per-camera ISD::Camera::newImage hook installed in Server::hookCamera().
+// Every frame producer (Capture queue, PAA, Focus, Align, ad-hoc
+// camera_capture, raw INDI control) is covered without per-module wiring.
 void initImageTools(ToolRegistry *registry, Server *server);
 
 } // namespace Tools
